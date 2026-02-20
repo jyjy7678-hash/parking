@@ -5,28 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>내 차 어디? - 플러스미</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #000; color: white; text-align: center; padding: 15px; margin: 0; -webkit-user-select: none; overflow-x: hidden; }
+        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; text-align: center; margin: 0; padding: 15px; }
         .card { background: #1c1c1e; border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; position: relative; }
-        
         .tab-container { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab { flex: 1; padding: 15px; background: #2c2c2e; border-radius: 12px; font-size: 15px; color: #888; border: 1px solid #444; }
+        .tab { flex: 1; padding: 15px; background: #2c2c2e; border-radius: 12px; color: #888; border: 1px solid #444; cursor: pointer; }
         .tab.active { background: #f39c12; color: #000; font-weight: bold; border: none; }
-
-        .img-box { width: 100%; height: 220px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #444; position: relative; touch-action: none; }
-        .img-box img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-        
-        #dragArea { border: 2px solid #30d158; touch-action: none !important; }
-        .btn-camera-float { position: absolute; bottom: 10px; right: 10px; background: #30d158; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #fff; z-index: 30; }
-        
-        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        button { padding: 18px; font-size: 16px; border-radius: 15px; border: none; cursor: pointer; font-weight: bold; -webkit-tap-highlight-color: transparent; }
-        .btn-floor { background-color: #3a3a3c; color: white; }
-        .btn-floor.selected { background-color: #f39c12 !important; color: #000 !important; }
-
-        .btn-main { background-color: #30d158; color: white; width: 100%; margin-top: 15px; }
-        .btn-sub { background-color: transparent; color: #0a84ff; margin-top: 15px; font-size: 16px; border:none; display: block; width: 100%; }
+        .img-box { width: 100%; height: 220px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #444; }
+        .img-box img { width: 100%; height: 100%; object-fit: cover; }
         #currentPos { font-size: 52px; font-weight: 900; color: #ffd60a; margin: 10px 0; }
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        button { padding: 18px; font-size: 16px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-floor { background: #3a3a3c; color: #fff; }
+        .btn-floor.selected { background: #f39c12 !important; color: #000 !important; }
+        .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; color: #fff; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; z-index: 10; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
         .hidden { display: none !important; }
+        .btn-sub { background: none; color: #0a84ff; margin-top: 15px; display: block; width: 100%; font-size: 15px; }
     </style>
 </head>
 <body>
@@ -37,41 +30,49 @@
         <div id="tab-other" class="tab" onclick="switchTab('other')">📍 외부/기타</div>
     </div>
     <div class="card">
-        <button style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.6); color:#fff; padding:8px; border-radius:8px; z-index:20; font-size:11px;" onclick="resetTempImg()">임시사진 삭제</button>
-        <div class="btn-camera-float" onclick="triggerCamera()">📷</div>
+        <div class="img-box">
+            <div class="btn-camera" onclick="document.getElementById('cameraIn').click()">📷</div>
+            <div id="imgContent">🚗</div>
+        </div>
         <input type="file" id="cameraIn" hidden accept="image/*" capture="environment" onchange="handlePhoto(this)">
-        <div class="img-box" id="mainImgBox"></div>
         <div id="currentPos">--</div>
-        <p id="saveTime" style="font-size: 13px; color: #8e8e93;">층수를 터치하세요</p>
+        <p id="saveTime" style="font-size:13px; color:#888;">층수를 선택하세요</p>
     </div>
     <div class="card"><div id="floorButtons" class="btn-grid"></div></div>
-    <button class="btn-sub" onclick="showView('setting')">⚙️ 설정</button>
+    <button class="btn-sub" onclick="showView('setting')">⚙️ 주차장 및 프로필 설정</button>
 </div>
 
 <div id="settingView" class="hidden">
     <div class="card">
-        <h3>🖼️ 프로필 구도 조절</h3>
-        <div id="dragArea" class="img-box">
-            <div id="settingPlaceholder" style="font-size:60px;">🚗</div>
+        <h3>🖼️ 프로필 사진 설정</h3>
+        <div class="img-box" id="dragArea" style="border: 2px solid #30d158;">
+            <div id="settingPlaceholder">🚗</div>
             <img id="settingImgPreview" src="" class="hidden">
         </div>
-        <button class="btn-main" style="background:#444;" onclick="document.getElementById('profileIn').click()">기본 프로필 사진 선택</button>
+        <button onclick="document.getElementById('profileIn').click()" style="background:#444; color:#fff; width:100%; margin-top:10px;">사진 선택</button>
         <input type="file" id="profileIn" hidden accept="image/*" onchange="handleProfilePhoto(this)">
         <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
         <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
-        <button class="btn-main" onclick="saveAllSettings()">저장 완료</button>
-        <button class="btn-sub" onclick="showView('main')" style="color:#ff453a;">취소</button>
+        <button onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:15px;">저장 및 적용</button>
+        <button onclick="showView('main')" style="background:none; color:#ff453a; width:100%; margin-top:10px;">취소</button>
     </div>
 </div>
 
 <script>
-    // 탭별로 사진 데이터를 완전히 분리
-    let config = JSON.parse(localStorage.getItem('parkingConfig')) || {
+    // 1. 구버전 데이터 강제 청소 (가장 중요)
+    if (!localStorage.getItem('parking_v3')) {
+        localStorage.clear();
+        localStorage.setItem('parking_v3', 'cleaned');
+    }
+
+    const initialConfig = {
         currentTab: 'home',
         imgPos: 50,
         home: { profileImg: '', tempImg: '', lastPos: '--', floors: ['B1', 'B2', 'B3'], lastTime: '' },
-        other: { profileImg: '', tempImg: '', lastPos: '--', floors: ['1F', 'B1', 'B2'], lastTime: '' }
+        other: { profileImg: '', tempImg: '', lastPos: '--', floors: ['1F', 'B1', 'B2', 'B3'], lastTime: '' }
     };
+
+    let config = JSON.parse(localStorage.getItem('parkingData')) || initialConfig;
 
     function init() {
         const cur = config.currentTab;
@@ -80,13 +81,10 @@
         document.getElementById('tab-home').className = 'tab' + (cur === 'home' ? ' active' : '');
         document.getElementById('tab-other').className = 'tab' + (cur === 'other' ? ' active' : '');
 
-        // 사진 표시 (임시 사진 우선, 없으면 프로필 사진)
+        const imgDiv = document.getElementById('imgContent');
         const displayImg = data.tempImg || data.profileImg;
-        document.getElementById('mainImgBox').innerHTML = displayImg 
-            ? `<img src="${displayImg}" style="object-position: center ${config.imgPos}%">` 
-            : `<div style="font-size:60px">🚗</div>`;
+        imgDiv.innerHTML = displayImg ? `<img src="${displayImg}" style="object-position: center ${config.imgPos}%">` : `<div style="font-size:60px">🚗</div>`;
 
-        // 층 버튼 생성
         const btnGrid = document.getElementById('floorButtons');
         btnGrid.innerHTML = '';
         data.floors.forEach(f => {
@@ -101,50 +99,23 @@
         document.getElementById('saveTime').innerText = data.lastTime ? "기록 시간: " + data.lastTime : "층수를 선택해 주세요";
     }
 
-    // 카메라 버튼 클릭
-    function triggerCamera() { document.getElementById('cameraIn').click(); }
+    function saveParking(f) {
+        const now = new Date();
+        config[config.currentTab].lastPos = f;
+        config[config.currentTab].lastTime = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
+        saveData();
+        init();
+    }
 
-    // 사진 촬영 후 처리 (현재 탭에만 저장)
     function handlePhoto(input) {
         if (!input.files || !input.files[0]) return;
         const reader = new FileReader();
         reader.onload = (e) => {
             config[config.currentTab].tempImg = e.target.result;
-            saveConfig();
-            init(); // 화면 즉시 갱신
+            saveData();
+            init();
         };
         reader.readAsDataURL(input.files[0]);
-    }
-
-    // 층수 저장
-    function saveParking(floor) {
-        const now = new Date();
-        const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-        config[config.currentTab].lastPos = floor;
-        config[config.currentTab].lastTime = time;
-        saveConfig();
-        init();
-        if(navigator.vibrate) navigator.vibrate(50);
-    }
-
-    function switchTab(t) { config.currentTab = t; saveConfig(); init(); }
-    function saveConfig() { localStorage.setItem('parkingConfig', JSON.stringify(config)); }
-    function resetTempImg() { config[config.currentTab].tempImg = ''; saveConfig(); init(); }
-
-    // --- 드래그 및 설정 관련 ---
-    function showView(v) {
-        document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
-        document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
-        if(v === 'setting') {
-            const setImg = document.getElementById('settingImgPreview');
-            const setPlace = document.getElementById('settingPlaceholder');
-            const pImg = config[config.currentTab].profileImg;
-            if(pImg) {
-                setImg.src = pImg; setImg.style.objectPosition = `center ${config.imgPos}%`;
-                setImg.classList.remove('hidden'); setPlace.classList.add('hidden');
-            }
-            renderSetupGrid();
-        }
     }
 
     function handleProfilePhoto(input) {
@@ -152,9 +123,21 @@
         reader.onload = (e) => {
             config[config.currentTab].profileImg = e.target.result;
             config[config.currentTab].tempImg = '';
-            saveConfig(); showView('setting');
+            const preview = document.getElementById('settingImgPreview');
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            document.getElementById('settingPlaceholder').classList.add('hidden');
         };
         reader.readAsDataURL(input.files[0]);
+    }
+
+    function switchTab(t) { config.currentTab = t; saveData(); init(); }
+    function saveData() { localStorage.setItem('parkingData', JSON.stringify(config)); }
+
+    function showView(v) {
+        document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
+        document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
+        if (v === 'setting') renderSetupGrid();
     }
 
     function renderSetupGrid() {
@@ -163,7 +146,7 @@
         const curFloors = config[config.currentTab].floors;
         ALL.forEach(f => {
             const btn = document.createElement('button');
-            btn.className = curFloors.includes(f) ? 'btn-floor selected' : 'btn-floor';
+            btn.className = 'btn-floor' + (curFloors.includes(f) ? ' selected' : '');
             btn.style.fontSize = '12px'; btn.innerText = f;
             btn.onclick = () => {
                 const idx = curFloors.indexOf(f);
@@ -174,24 +157,26 @@
         });
     }
 
-    function saveAllSettings() { saveConfig(); showView('main'); init(); }
+    function saveAllSettings() { saveData(); showView('main'); init(); }
 
-    // 드래그 로직 (생략 없이 유지)
+    // 드래그 기능 (안전장치 추가)
     let isDragging = false, startY, startImgPos;
     const dragArea = document.getElementById('dragArea');
-    dragArea.addEventListener('touchstart', (e) => {
-        if(!config[config.currentTab].profileImg) return;
-        isDragging = true; startY = e.touches[0].pageY; startImgPos = config.imgPos;
-    }, {passive: false});
-    window.addEventListener('touchmove', (e) => {
-        if(!isDragging) return; e.preventDefault();
-        const diff = (e.touches[0].pageY - startY) / 1.5;
+    const start = (e) => { isDragging = true; startY = (e.touches ? e.touches[0].pageY : e.pageY); startImgPos = config.imgPos; };
+    const move = (e) => {
+        if (!isDragging) return;
+        const y = (e.touches ? e.touches[0].pageY : e.pageY);
+        const diff = (y - startY) / 1.5;
         let newPos = startImgPos - diff;
-        if(newPos < 0) newPos = 0; if(newPos > 100) newPos = 100;
+        if (newPos < 0) newPos = 0; if (newPos > 100) newPos = 100;
         config.imgPos = newPos;
-        document.getElementById('settingImgPreview').style.objectPosition = `center ${newPos}%`;
-    }, {passive: false});
-    window.addEventListener('touchend', () => { isDragging = false; saveConfig(); });
+        const preview = document.getElementById('settingImgPreview');
+        if (preview) preview.style.objectPosition = `center ${newPos}%`;
+    };
+    const end = () => { isDragging = false; saveData(); };
+    dragArea.addEventListener('touchstart', start, {passive: false});
+    window.addEventListener('touchmove', move, {passive: false});
+    window.addEventListener('touchend', end);
 
     init();
 </script>
