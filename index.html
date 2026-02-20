@@ -7,14 +7,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="내 차 어디?">
-    <title>내 차 어디? - 플러스미</title>
+    <title>내 차 어디? - mongme</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #000; color: #fff; text-align: center; margin: 0; padding: 15px; -webkit-user-select: none; }
         .card { background: #1c1c1e; border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; position: relative; overflow: hidden; }
         .tab-container { display: flex; gap: 10px; margin-bottom: 15px; }
         .tab { flex: 1; padding: 15px; background: #2c2c2e; border-radius: 12px; color: #888; border: 1px solid #444; }
         .tab.active { background: #f39c12; color: #000; font-weight: bold; border: none; }
-        .img-box { width: 100%; height: 220px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #444; }
+        .img-box { width: 100%; height: 220px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #444; touch-action: none; }
         .img-box img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
         #currentPos { font-size: 52px; font-weight: 900; color: #ffd60a; margin: 10px 0; }
         .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -22,11 +22,12 @@
         .btn-floor { background: #3a3a3c; color: #fff; }
         .btn-floor.selected { background: #f39c12 !important; color: #000 !important; }
         .btn-out { background: #ff453a; color: #fff; width: 100%; margin-top: 15px; padding: 20px; font-size: 18px; }
-        .btn-map { background: #0a84ff; color: #fff; width: 100%; margin-bottom: 10px; padding: 12px; font-size: 14px; border-radius: 10px; }
+        .btn-map { background: #0a84ff; color: #fff; width: 80%; margin: 10px auto; padding: 12px; font-size: 14px; border-radius: 10px; display: block; }
         .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; color: #fff; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; z-index: 10; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
         #durationTime { font-size: 16px; color: #30d158; font-weight: bold; margin-top: 5px; height: 20px; }
-        .memo-input { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 80%; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: center; font-size: 14px; }
+        .memo-input { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 80%; padding: 12px; border-radius: 10px; margin: 10px 0; text-align: center; font-size: 15px; }
         .hidden { display: none !important; }
+        hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -44,13 +45,28 @@
         <p id="saveTime" style="font-size:13px; color:#888; margin-bottom:5px;">층수를 선택하세요</p>
         <div id="durationTime"></div>
         <button id="mapBtn" class="btn-map hidden" onclick="openMap()">📍 지도에서 내 차 찾기</button>
-        <input type="text" id="memoInput" class="memo-input" placeholder="추가 메모 (예: 기둥번호)" oninput="saveMemo(this.value)">
+        <input type="text" id="memoInput" class="memo-input" placeholder="메모 (예: 기둥번호)" oninput="saveMemo(this.value)">
     </div>
     <div class="card">
         <div id="floorButtons" class="btn-grid"></div>
         <button id="outBtn" class="btn-out hidden" onclick="clearParking()">🚗 출차 완료 (기록 삭제)</button>
     </div>
     <button style="background:none; color:#0a84ff; margin-top:15px; width:100%;" onclick="showView('setting')">⚙️ 주차장 및 프로필 설정</button>
+</div>
+
+<div id="settingView" class="hidden">
+    <div class="card">
+        <h3>🖼️ 프로필 구도 설정</h3>
+        <div class="img-box" id="dragArea" style="border: 2px solid #30d158;"></div>
+        <button onclick="document.getElementById('profileIn').click()" style="background:#444; color:#fff; width:100%; margin-top:10px;">사진 선택</button>
+        <input type="file" id="profileIn" hidden accept="image/*" onchange="processImg(this, 'profile')">
+        <hr>
+        <p style="font-size:14px; color:#888;">사용할 층수 버튼 선택</p>
+        <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
+        <button onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:20px; padding:20px;">설정 저장 및 적용</button>
+        <button onclick="showView('main')" style="background:none; color:#ff453a; width:100%; margin-top:10px;">취소</button>
+        <button onclick="confirmReset()" style="color:#666; font-size:12px; margin-top:30px; background:none; width:100%;">저장소 초기화</button>
+    </div>
 </div>
 
 <script>
@@ -67,7 +83,8 @@
         document.getElementById('tab-other').className = 'tab' + (config.currentTab === 'other' ? ' active' : '');
         
         const mainBox = document.getElementById('mainImgBox');
-        mainBox.innerHTML = (data.temp || data.profile) ? `<img src="${data.temp || data.profile}" style="object-position: center ${data.imgY}%">` : `<div style="font-size:60px">🚗</div>`;
+        const imgUrl = data.temp || data.profile;
+        mainBox.innerHTML = imgUrl ? `<img src="${imgUrl}" style="object-position: center ${data.imgY}%">` : `<div style="font-size:60px">🚗</div>`;
         
         const btnGrid = document.getElementById('floorButtons');
         btnGrid.innerHTML = '';
@@ -106,7 +123,10 @@
 
     function openMap() {
         const data = config[config.currentTab];
-        if (data.lat) window.open(`https://www.google.com/maps?q=${data.lat},${data.lng}`, '_blank');
+        if (data.lat) {
+            const url = `https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lng}`;
+            window.open(url, '_blank');
+        }
     }
 
     function saveMemo(val) { config[config.currentTab].memo = val; save(); }
@@ -119,6 +139,64 @@
         }
     }
 
+    function processImg(input, mode) {
+        if (!input.files || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const max = 500; 
+                let w = img.width, h = img.height;
+                if (w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const compressed = canvas.toDataURL('image/jpeg', 0.3); 
+                
+                if (mode === 'temp') {
+                    config[config.currentTab].temp = compressed;
+                    save(); init();
+                } else {
+                    config[config.currentTab].profile = compressed;
+                    config[config.currentTab].temp = '';
+                    const dragArea = document.getElementById('dragArea');
+                    dragArea.innerHTML = `<img id="previewImg" src="${compressed}" style="object-position: center ${config[config.currentTab].imgY}%">`;
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    function showView(v) {
+        document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
+        document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
+        if (v === 'setting') {
+            const data = config[config.currentTab];
+            const dragArea = document.getElementById('dragArea');
+            dragArea.innerHTML = data.profile ? `<img id="previewImg" src="${data.profile}" style="object-position: center ${data.imgY}%">` : `<div style="font-size:60px">🚗</div>`;
+            renderSetupGrid();
+        }
+    }
+
+    function renderSetupGrid() {
+        const grid = document.getElementById('setupGrid'); grid.innerHTML = '';
+        const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9'];
+        const cur = config[config.currentTab].floors;
+        ALL.forEach(f => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-floor' + (cur.includes(f) ? ' selected' : '');
+            btn.style.fontSize = '12px'; btn.innerText = f;
+            btn.onclick = () => {
+                const i = cur.indexOf(f);
+                if (i > -1) cur.splice(i, 1); else cur.push(f);
+                renderSetupGrid();
+            };
+            grid.appendChild(btn);
+        });
+    }
+
     function updateDuration() {
         const data = config[config.currentTab];
         const div = document.getElementById('durationTime');
@@ -127,15 +205,31 @@
             const h = Math.floor(diff / 3600000);
             const m = Math.floor((diff % 3600000) / 60000);
             div.innerText = h > 0 ? `⏱ 주차 중: ${h}시간 ${m}분째` : `⏱ 주차 중: ${m}분째`;
-            div.style.color = h >= 2 ? '#ff453a' : '#30d158'; // 2시간 넘으면 빨간색
+            div.style.color = h >= 2 ? '#ff453a' : '#30d158';
         } else { div.innerText = ""; }
     }
     setInterval(updateDuration, 60000);
-    
-    // (이전 코드의 이미지 처리 및 탭 전환 함수들 동일하게 유지)
+
     function save() { localStorage.setItem(storeKey, JSON.stringify(config)); }
+    function saveAllSettings() { save(); showView('main'); init(); }
     function switchTab(t) { config.currentTab = t; save(); init(); }
-    function processImg(i, m) { /* 이전 v6와 동일한 이미지 압축 로직 */ }
+    function confirmReset() { if(confirm("초기화할까요?")) { localStorage.clear(); location.reload(); } }
+
+    // 드래그 로직
+    let isDragging = false, startY, startYPos;
+    document.getElementById('dragArea').addEventListener('touchstart', (e) => {
+        isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY;
+    });
+    window.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const y = e.touches[0].pageY;
+        let nextY = startYPos - (y - startY) / 2;
+        if (nextY < 0) nextY = 0; if (nextY > 100) nextY = 100;
+        config[config.currentTab].imgY = nextY;
+        const img = document.getElementById('previewImg');
+        if (img) img.style.objectPosition = `center ${nextY}%`;
+    });
+    window.addEventListener('touchend', () => { isDragging = false; });
 
     init();
 </script>
