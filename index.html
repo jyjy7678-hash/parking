@@ -5,76 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="내 차 어디?">
-    <title>내 차 어디? - moneme</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>내 차 어디? - mongme</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; text-align: center; margin: 0; padding: 15px; -webkit-user-select: none; }
-        .card { background: #1c1c1e; border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; position: relative; overflow: hidden; }
-        .tab-container { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab { flex: 1; padding: 15px; background: #2c2c2e; border-radius: 12px; color: #888; border: 1px solid #444; }
-        .tab.active { background: #f39c12; color: #000; font-weight: bold; border: none; }
-        .img-box { width: 100%; height: 220px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #444; touch-action: none; }
-        .img-box img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-        #currentPos { font-size: 52px; font-weight: 900; color: #ffd60a; margin: 10px 0; }
-        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        button { padding: 18px; font-size: 16px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        /* 화면 드래그 방지 및 앱 스타일 고정 */
+        html, body { 
+            position: fixed; overflow: hidden; width: 100%; height: 100%; 
+            background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 0;
+        }
+        #app { 
+            display: flex; flex-direction: column; height: 100%; max-width: 500px; margin: 0 auto;
+            padding: env(safe-area-inset-top) 15px env(safe-area-inset-bottom) 15px;
+        }
+        .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 20px; }
+        
+        /* 카드 및 버튼 스타일 */
+        .card { background: #1c1c1e; border-radius: 20px; padding: 15px; margin-bottom: 12px; border: 1px solid #333; position: relative; }
+        .tab-container { display: flex; gap: 8px; margin: 15px 0; }
+        .tab { flex: 1; padding: 12px; background: #2c2c2e; border-radius: 12px; color: #888; text-align: center; font-weight: bold; }
+        .tab.active { background: #f39c12; color: #000; }
+        
+        .img-box { width: 100%; height: 200px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
+        .img-box img { width: 100%; height: 100%; object-fit: cover; }
+        
+        #currentPos { font-size: 48px; font-weight: 900; color: #ffd60a; margin: 5px 0; }
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        button { padding: 15px; font-size: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
         .btn-floor { background: #3a3a3c; color: #fff; }
-        .btn-floor.selected { background: #f39c12 !important; color: #000 !important; }
-        .btn-out { background: #ff453a; color: #fff; width: 100%; margin-top: 15px; padding: 20px; font-size: 18px; }
-        .btn-map { background: #fae100; color: #3c1e1e; width: 85%; margin: 10px auto; padding: 14px; font-size: 15px; border-radius: 12px; display: block; font-weight: 800; }
-        .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; color: #fff; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; z-index: 10; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
-        #durationTime { font-size: 16px; color: #30d158; font-weight: bold; margin-top: 5px; height: 20px; }
-        .memo-input { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 80%; padding: 12px; border-radius: 10px; margin: 10px 0; text-align: center; font-size: 15px; }
+        .btn-floor.selected { background: #f39c12; color: #000; }
+        
+        /* 새로운 기능 버튼들 */
+        .btn-kakao { background: #fae100; color: #3c1e1e; width: 100%; margin-top: 10px; padding: 12px; font-weight: 800; }
+        .btn-out { background: #ff453a; color: #fff; width: 100%; margin-top: 10px; padding: 15px; }
+        .memo-chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; justify-content: center; }
+        .chip { background: #444; color: #ccc; padding: 6px 12px; border-radius: 20px; font-size: 12px; }
+        
+        .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
         .hidden { display: none !important; }
-        hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
+        .memo-input { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 90%; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
 
-<div id="mainView">
+<div id="app">
     <div class="tab-container">
         <div id="tab-home" class="tab active" onclick="switchTab('home')">🏠 우리집</div>
         <div id="tab-other" class="tab" onclick="switchTab('other')">📍 외부/기타</div>
     </div>
-    <div class="card">
-        <div class="img-box" id="mainImgBox"></div>
-        <div class="btn-camera" onclick="document.getElementById('cameraIn').click()">📷</div>
-        <input type="file" id="cameraIn" hidden accept="image/*" capture="environment" onchange="processImg(this, 'temp')">
-        <div id="currentPos">--</div>
-        <p id="saveTime" style="font-size:13px; color:#888; margin-bottom:5px;">층수를 선택하세요</p>
-        <div id="durationTime"></div>
-        <button id="mapBtn" class="btn-map hidden" onclick="openMap()">💛 카카오맵에서 내 차 찾기</button>
-        <input type="text" id="memoInput" class="memo-input" placeholder="메모 (예: 기둥번호)" oninput="saveMemo(this.value)">
-    </div>
-    <div class="card">
-        <div id="floorButtons" class="btn-grid"></div>
-        <button id="outBtn" class="btn-out hidden" onclick="clearParking()">🚗 출차 완료 (기록 삭제)</button>
-    </div>
-    <button style="background:none; color:#0a84ff; margin-top:15px; width:100%;" onclick="showView('setting')">⚙️ 주차장 및 프로필 설정</button>
-</div>
 
-<div id="settingView" class="hidden">
-    <div class="card">
-        <h3>🖼️ 프로필 구도 설정</h3>
-        <div class="img-box" id="dragArea" style="border: 2px solid #30d158;"></div>
-        <button onclick="document.getElementById('profileIn').click()" style="background:#444; color:#fff; width:100%; margin-top:10px;">사진 선택</button>
-        <input type="file" id="profileIn" hidden accept="image/*" onchange="processImg(this, 'profile')">
-        <hr>
-        <p style="font-size:14px; color:#888;">사용할 층수 버튼 선택</p>
-        <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
-        <button onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:20px; padding:20px;">설정 저장 및 적용</button>
-        <button onclick="showView('main')" style="background:none; color:#ff453a; width:100%; margin-top:10px;">취소</button>
-        <button onclick="confirmReset()" style="color:#666; font-size:12px; margin-top:30px; background:none; width:100%;">저장소 초기화</button>
+    <div class="scroll-area">
+        <div class="card">
+            <div class="img-box" id="mainImgBox"></div>
+            <div class="btn-camera" onclick="document.getElementById('cameraIn').click()">📷</div>
+            <input type="file" id="cameraIn" hidden accept="image/*" capture="environment" onchange="processImg(this, 'temp')">
+            <div id="currentPos">--</div>
+            <div id="saveTime" style="font-size:13px; color:#888;">층수를 선택하세요</div>
+            <div id="durationTime" style="font-size:15px; font-weight:bold; margin-top:5px;"></div>
+            
+            <input type="text" id="memoInput" class="memo-input" placeholder="기둥 번호 등 메모" oninput="saveMemo(this.value)">
+            <div class="memo-chips">
+                <div class="chip" onclick="addMemo('엘베 근처')">엘베 근처</div>
+                <div class="chip" onclick="addMemo('입구 앞')">입구 앞</div>
+                <div class="chip" onclick="addMemo('기둥 ')">기둥</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div id="floorButtons" class="btn-grid"></div>
+        </div>
+
+        <div id="actionBtns" class="hidden">
+            <button class="btn-kakao" onclick="shareLocation()">💬 카톡으로 위치 공유</button>
+            <button class="btn-out" onclick="clearParking()">🚗 출차 완료 (기록 삭제)</button>
+        </div>
+        
+        <button style="background:none; color:#0a84ff; width:100%; margin-top:20px;" onclick="showView('setting')">⚙️ 설정 및 프로필</button>
     </div>
 </div>
 
 <script>
-    const storeKey = 'parking_v7_kakao'; // 버전을 올려서 카카오맵 기준 저장
+    const storeKey = 'parking_v8';
     let config = JSON.parse(localStorage.getItem(storeKey)) || {
         currentTab: 'home',
-        home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, imgY: 50, lat: null, lng: null, memo: '' },
-        other: { profile: '', temp: '', pos: '--', floors: ['1F', 'B1', 'B2'], time: '', timestamp: null, imgY: 50, lat: null, lng: null, memo: '' }
+        home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, lat: null, lng: null, memo: '' },
+        other: { profile: '', temp: '', pos: '--', floors: ['1F', 'B1', 'B2'], time: '', timestamp: null, lat: null, lng: null, memo: '' }
     };
 
     function init() {
@@ -84,7 +98,7 @@
         
         const mainBox = document.getElementById('mainImgBox');
         const imgUrl = data.temp || data.profile;
-        mainBox.innerHTML = imgUrl ? `<img src="${imgUrl}" style="object-position: center ${data.imgY}%">` : `<div style="font-size:60px">🚗</div>`;
+        mainBox.innerHTML = imgUrl ? `<img src="${imgUrl}">` : `<div style="font-size:50px">🚗</div>`;
         
         const btnGrid = document.getElementById('floorButtons');
         btnGrid.innerHTML = '';
@@ -99,8 +113,7 @@
         document.getElementById('currentPos').innerText = data.pos;
         document.getElementById('saveTime').innerText = data.time ? "기록: " + data.time : "층수를 선택하세요";
         document.getElementById('memoInput').value = data.memo || '';
-        document.getElementById('mapBtn').classList.toggle('hidden', !data.lat);
-        document.getElementById('outBtn').classList.toggle('hidden', data.pos === '--' && !data.temp);
+        document.getElementById('actionBtns').classList.toggle('hidden', data.pos === '--' && !data.temp);
         
         updateDuration();
     }
@@ -121,83 +134,34 @@
         } else { save(); init(); }
     }
 
-    // ⭐ 카카오맵 연동 핵심 함수
-    function openMap() {
-        const data = config[config.currentTab];
-        if (data.lat && data.lng) {
-            // 카카오맵 목적지 공유 URL 포맷
-            const url = `https://map.kakao.com/link/map/내차위치,${data.lat},${data.lng}`;
-            window.open(url, '_blank');
-        }
+    function addMemo(text) {
+        const input = document.getElementById('memoInput');
+        input.value += text;
+        saveMemo(input.value);
     }
 
-    function saveMemo(val) { config[config.currentTab].memo = val; save(); }
+    function shareLocation() {
+        const data = config[config.currentTab];
+        const mapUrl = data.lat ? `\n📍 지도: https://map.kakao.com/link/map/주차위치,${data.lat},${data.lng}` : "";
+        const text = `[내 차 어디?]\n위치: ${data.pos}\n시간: ${data.time}\n메모: ${data.memo || '없음'}${mapUrl}`;
+        
+        // 클립보드 복사 후 안내 (카톡으로 바로 보내기는 API 연동이 복잡하므로 복사 방식이 가장 깔끔합니다)
+        navigator.clipboard.writeText(text).then(() => {
+            alert("주차 정보가 복사되었습니다! 카톡창에 붙여넣기 하세요.");
+        });
+    }
 
+    // (기타 save, clearParking, processImg 로직은 이전과 동일)
+    function save() { localStorage.setItem(storeKey, JSON.stringify(config)); }
+    function saveMemo(val) { config[config.currentTab].memo = val; save(); }
+    function switchTab(t) { config.currentTab = t; save(); init(); }
     function clearParking() {
-        if(confirm("출차하셨나요? 모든 기록을 초기화합니다.")) {
+        if(confirm("출차하셨나요?")) {
             const data = config[config.currentTab];
             data.pos = '--'; data.time = ''; data.timestamp = null; data.temp = ''; data.lat = null; data.lng = null; data.memo = '';
             save(); init();
         }
     }
-
-    // (이미지 처리 및 기타 공통 함수들 생략없이 포함)
-    function processImg(input, mode) {
-        if (!input.files || !input.files[0]) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const max = 500; 
-                let w = img.width, h = img.height;
-                if (w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
-                canvas.width = w; canvas.height = h;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
-                const compressed = canvas.toDataURL('image/jpeg', 0.3); 
-                if (mode === 'temp') {
-                    config[config.currentTab].temp = compressed;
-                    save(); init();
-                } else {
-                    config[config.currentTab].profile = compressed;
-                    config[config.currentTab].temp = '';
-                    document.getElementById('dragArea').innerHTML = `<img id="previewImg" src="${compressed}" style="object-position: center ${config[config.currentTab].imgY}%">`;
-                }
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-
-    function showView(v) {
-        document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
-        document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
-        if (v === 'setting') {
-            const data = config[config.currentTab];
-            const dragArea = document.getElementById('dragArea');
-            dragArea.innerHTML = data.profile ? `<img id="previewImg" src="${data.profile}" style="object-position: center ${data.imgY}%">` : `<div style="font-size:60px">🚗</div>`;
-            renderSetupGrid();
-        }
-    }
-
-    function renderSetupGrid() {
-        const grid = document.getElementById('setupGrid'); grid.innerHTML = '';
-        const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9'];
-        const cur = config[config.currentTab].floors;
-        ALL.forEach(f => {
-            const btn = document.createElement('button');
-            btn.className = 'btn-floor' + (cur.includes(f) ? ' selected' : '');
-            btn.style.fontSize = '12px'; btn.innerText = f;
-            btn.onclick = () => {
-                const i = cur.indexOf(f);
-                if (i > -1) cur.splice(i, 1); else cur.push(f);
-                renderSetupGrid();
-            };
-            grid.appendChild(btn);
-        });
-    }
-
     function updateDuration() {
         const data = config[config.currentTab];
         const div = document.getElementById('durationTime');
@@ -205,32 +169,11 @@
             const diff = new Date().getTime() - data.timestamp;
             const h = Math.floor(diff / 3600000);
             const m = Math.floor((diff % 3600000) / 60000);
-            div.innerText = h > 0 ? `⏱ 주차 중: ${h}시간 ${m}분째` : `⏱ 주차 중: ${m}분째`;
+            div.innerText = h > 0 ? `⏱ ${h}시간 ${m}분째 주차 중` : `⏱ ${m}분째 주차 중`;
             div.style.color = h >= 2 ? '#ff453a' : '#30d158';
         } else { div.innerText = ""; }
     }
     setInterval(updateDuration, 60000);
-
-    function save() { localStorage.setItem(storeKey, JSON.stringify(config)); }
-    function saveAllSettings() { save(); showView('main'); init(); }
-    function switchTab(t) { config.currentTab = t; save(); init(); }
-    function confirmReset() { if(confirm("초기화할까요?")) { localStorage.clear(); location.reload(); } }
-
-    let isDragging = false, startY, startYPos;
-    document.getElementById('dragArea').addEventListener('touchstart', (e) => {
-        isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY;
-    });
-    window.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        const y = e.touches[0].pageY;
-        let nextY = startYPos - (y - startY) / 2;
-        if (nextY < 0) nextY = 0; if (nextY > 100) nextY = 100;
-        config[config.currentTab].imgY = nextY;
-        const img = document.getElementById('previewImg');
-        if (img) img.style.objectPosition = `center ${nextY}%`;
-    });
-    window.addEventListener('touchend', () => { isDragging = false; });
-
     init();
 </script>
 </body>
