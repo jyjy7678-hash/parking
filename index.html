@@ -27,14 +27,10 @@
         button { border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
         .btn-floor { background: #3a3a3c; color: #fff; padding: 15px; font-size: 16px; }
         .btn-floor.selected { background: var(--main-color); color: #000; }
-        .btn-map { background: #fae100; color: #3c1e1e; width: 100%; margin-top: 8px; padding: 12px; font-weight: 800; }
-        .btn-out { background: #ff453a; color: #fff; width: 100%; margin-top: 10px; padding: 15px; }
         .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
         .hidden { display: none !important; }
         .version-tag { font-size: 10px; color: #444; margin: 15px 0; text-align: center; }
         input[type="text"] { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 100%; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: center; box-sizing: border-box; }
-        
-        /* 초기화 버튼 스타일 */
         .btn-reset { background: none; color: #ff453a; border: 1px solid #ff453a; width: 100%; padding: 12px; margin-top: 30px; border-radius: 10px; font-size: 12px; }
     </style>
 </head>
@@ -62,11 +58,11 @@
         </div>
         <div class="card"><div id="floorButtons" class="btn-grid"></div></div>
         <div id="actionBtns" class="hidden">
-            <button class="btn-map" onclick="openMap()">💛 카카오맵 위치 확인</button>
-            <button class="btn-out" onclick="clearParking()">🚗 출차 완료</button>
+            <button style="background:#fae100; color:#3c1e1e; width:100%; margin-top:8px; padding:12px; font-weight:800; border-radius:12px;" onclick="openMap()">💛 카카오맵 위치 확인</button>
+            <button style="background:#ff453a; color:#fff; width:100%; margin-top:10px; padding:15px; font-weight:bold; border-radius:12px;" onclick="clearParking()">🚗 출차 완료</button>
         </div>
         <button style="background:none; color:#0a84ff; width:100%; margin-top:15px; font-size:13px;" onclick="showView('setting')">⚙️ 설정 및 프로필 변경</button>
-        <div class="version-tag">Version 9.6 (Reset & High-Res)</div>
+        <div class="version-tag">Version 9.7 (Storage Clear)</div>
     </div>
 
     <div id="settingView" class="scroll-area hidden">
@@ -78,16 +74,14 @@
             <p style="font-size:12px; color:#888; margin-top:15px;">버튼 구성 설정</p>
             <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
             <button id="saveSetBtn" onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:20px; padding:15px;">설정 저장 및 적용</button>
-            
-            <button class="btn-reset" onclick="resetAppData()">🗑️ 저장공간 비우기 (앱 초기화)</button>
-            
+            <button class="btn-reset" onclick="resetAppData()">🗑️ 저장공간 강제 비우기</button>
             <button onclick="showView('main')" style="background:none; color:#888; width:100%; margin-top:10px; padding-bottom:20px;">취소</button>
         </div>
     </div>
 </div>
 
 <script>
-    const storeKey = 'parking_v9_6';
+    const storeKey = 'parking_v9_7'; // 키 변경으로 이전 찌꺼기 완벽 차단
     let config = JSON.parse(localStorage.getItem(storeKey)) || {
         currentTab: 'home',
         home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, lat: null, lng: null, memo: '', imgY: 50 },
@@ -114,28 +108,25 @@
 
     function processImg(input, mode) {
         if (!input.files || !input.files[0]) return;
-        if(mode === 'profile') document.getElementById('photoBtn').innerText = "고화질 압축 중...";
-        
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const max = 600; // 화질 개선을 위해 600px로 상향
+                const max = 500; // 화질 타협점
                 let w = img.width, h = img.height;
                 if (w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                // 화질 0.6으로 상향 (용량과 화질의 균형)
-                const compressed = canvas.toDataURL('image/jpeg', 0.6); 
+                const compressed = canvas.toDataURL('image/jpeg', 0.5); 
                 
                 if (mode === 'temp') {
-                    config[config.currentTab].temp = compressed; save(); init();
+                    config[config.currentTab].temp = compressed; 
+                    safeSave(); init();
                 } else {
                     config[config.currentTab].profile = compressed;
                     config[config.currentTab].temp = '';
                     config[config.currentTab].imgY = 50;
-                    document.getElementById('photoBtn').innerText = "사진 선택";
                     showView('setting');
                 }
             };
@@ -144,27 +135,31 @@
         reader.readAsDataURL(input.files[0]);
     }
 
+    function safeSave() {
+        try {
+            localStorage.setItem(storeKey, JSON.stringify(config));
+        } catch(e) {
+            // 저장 실패 시 즉시 임시 사진 비우고 재시도
+            config.home.temp = ''; config.other.temp = '';
+            localStorage.setItem(storeKey, JSON.stringify(config));
+            alert("저장 공간 확보를 위해 이전 주차 사진을 정리했습니다.");
+        }
+    }
+
     function resetAppData() {
-        if(confirm("앱의 모든 데이터(사진 포함)를 비울까요?\n저장 공간 부족 시 필수입니다.")) {
-            localStorage.removeItem(storeKey);
+        if(confirm("모든 데이터를 강제로 비웁니다.\n이 작업은 되돌릴 수 없습니다.")) {
+            localStorage.clear(); // 전체 스토리지 완전 삭제
             location.reload();
         }
     }
 
     function saveAllSettings() {
-        const btn = document.getElementById('saveSetBtn');
-        btn.innerText = "저장 중...";
-        setTimeout(() => {
-            try {
-                save();
-                showView('main');
-                init();
-            } catch(e) {
-                alert("여전히 용량이 부족합니다. '저장공간 비우기' 버튼을 먼저 눌러주세요!");
-            } finally {
-                btn.innerText = "설정 저장 및 적용";
-            }
-        }, 100);
+        try {
+            localStorage.setItem(storeKey, JSON.stringify(config));
+            showView('main'); init();
+        } catch(e) {
+            alert("저장 실패! 사진 화질을 낮추거나 '강제 비우기'를 해주세요.");
+        }
     }
 
     function showView(v) {
@@ -178,18 +173,17 @@
         }
     }
 
-    function recordPosition(f) { const now = new Date(); const d = config[config.currentTab]; d.pos = f; d.time = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`; d.timestamp = now.getTime(); if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(p => { d.lat = p.coords.latitude; d.lng = p.coords.longitude; save(); init(); }, () => { save(); init(); }, { enableHighAccuracy: true }); } else { save(); init(); } }
+    function recordPosition(f) { const now = new Date(); const d = config[config.currentTab]; d.pos = f; d.time = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`; d.timestamp = now.getTime(); if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(p => { d.lat = p.coords.latitude; d.lng = p.coords.longitude; safeSave(); init(); }, () => { safeSave(); init(); }, { enableHighAccuracy: true }); } else { safeSave(); init(); } }
     function openMap() { const d = config[config.currentTab]; if (d.lat) window.open(`https://map.kakao.com/link/map/주차위치,${d.lat},${d.lng}`, '_blank'); else alert("좌표가 없습니다."); }
     function renderSetupGrid() { const g = document.getElementById('setupGrid'); g.innerHTML = ''; const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9']; const cur = config[config.currentTab].floors; ALL.forEach(f => { const b = document.createElement('button'); b.className = 'btn-floor' + (cur.includes(f) ? ' selected' : ''); b.style.fontSize = '12px'; b.innerText = f; b.onclick = () => { const i = cur.indexOf(f); if (i > -1) cur.splice(i, 1); else cur.push(f); renderSetupGrid(); }; g.appendChild(b); }); }
-    function clearParking() { if(confirm("기록을 삭제할까요?")) { const d = config[config.currentTab]; d.pos = '--'; d.time = ''; d.timestamp = null; d.temp = ''; d.lat = null; d.lng = null; d.memo = ''; save(); init(); } }
+    function clearParking() { if(confirm("기록을 삭제할까요?")) { const d = config[config.currentTab]; d.pos = '--'; d.time = ''; d.timestamp = null; d.temp = ''; d.lat = null; d.lng = null; d.memo = ''; safeSave(); init(); } }
     function updateDuration() { const d = config[config.currentTab]; const div = document.getElementById('durationTime'); if (d.timestamp) { const diff = new Date().getTime() - d.timestamp; const h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000); div.innerText = h > 0 ? `⏱ ${h}시간 ${m}분째` : `⏱ ${m}분째`; div.style.color = h >= 2 ? '#ff453a' : '#30d158'; } else { div.innerText = ""; } }
     let isDragging = false, startY, startYPos;
     document.getElementById('dragArea').addEventListener('touchstart', (e) => { isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY || 50; });
     window.addEventListener('touchmove', (e) => { if (!isDragging) return; let nextY = startYPos - (e.touches[0].pageY - startY) / 2; if (nextY < 0) nextY = 0; if (nextY > 100) nextY = 100; config[config.currentTab].imgY = nextY; const img = document.getElementById('previewImg'); if(img) img.style.objectPosition = `center ${nextY}%`; });
     window.addEventListener('touchend', () => { isDragging = false; });
-    function save() { localStorage.setItem(storeKey, JSON.stringify(config)); }
-    function saveMemo(v) { config[config.currentTab].memo = v; save(); }
-    function switchTab(t) { config.currentTab = t; save(); init(); }
+    function saveMemo(v) { config[config.currentTab].memo = v; safeSave(); }
+    function switchTab(t) { config.currentTab = t; safeSave(); init(); }
     setInterval(updateDuration, 60000);
     init();
 </script>
