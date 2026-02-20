@@ -2,71 +2,79 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>내 차 어디? - mongme</title>
+    <title>내 차 어디? - 플러스미</title>
     <style>
-        /* 화면 드래그 방지 및 앱 스타일 고정 */
+        :root { --main-color: #f39c12; --bg-color: #000; --card-bg: #1c1c1e; }
         html, body { 
             position: fixed; overflow: hidden; width: 100%; height: 100%; 
-            background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 0;
+            background: var(--bg-color); color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 0;
         }
-        #app { 
-            display: flex; flex-direction: column; height: 100%; max-width: 500px; margin: 0 auto;
-            padding: env(safe-area-inset-top) 15px env(safe-area-inset-bottom) 15px;
-        }
-        .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 20px; }
+        #app { display: flex; flex-direction: column; height: 100%; padding: env(safe-area-inset-top) 15px env(safe-area-inset-bottom) 15px; box-sizing: border-box; }
         
-        /* 카드 및 버튼 스타일 */
-        .card { background: #1c1c1e; border-radius: 20px; padding: 15px; margin-bottom: 12px; border: 1px solid #333; position: relative; }
-        .tab-container { display: flex; gap: 8px; margin: 15px 0; }
-        .tab { flex: 1; padding: 12px; background: #2c2c2e; border-radius: 12px; color: #888; text-align: center; font-weight: bold; }
-        .tab.active { background: #f39c12; color: #000; }
+        /* 상단 접기/펴기 탭 영역 */
+        .tab-wrapper { margin-bottom: 10px; }
+        .tab-toggle-btn { background: #2c2c2e; color: #888; width: 100%; padding: 8px; border-radius: 10px; font-size: 13px; margin-bottom: 5px; border: 1px solid #333; }
+        .tab-container { display: flex; gap: 8px; transition: all 0.3s ease; overflow: hidden; height: 50px; }
+        .tab-container.collapsed { height: 0; margin: 0; opacity: 0; }
+        .tab { flex: 1; padding: 12px; background: #2c2c2e; border-radius: 12px; color: #888; text-align: center; font-weight: bold; border: 1px solid #444; }
+        .tab.active { background: var(--main-color); color: #000; border: none; }
+
+        .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         
-        .img-box { width: 100%; height: 200px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
+        .card { background: var(--card-bg); border-radius: 20px; padding: 15px; margin-bottom: 12px; border: 1px solid #333; position: relative; }
+        .img-box { width: 100%; height: 180px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
         .img-box img { width: 100%; height: 100%; object-fit: cover; }
         
-        #currentPos { font-size: 48px; font-weight: 900; color: #ffd60a; margin: 5px 0; }
+        #currentPos { font-size: 44px; font-weight: 900; color: #ffd60a; margin: 5px 0; }
         .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        button { padding: 15px; font-size: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-floor { background: #3a3a3c; color: #fff; }
-        .btn-floor.selected { background: #f39c12; color: #000; }
+        button { border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-floor { background: #3a3a3c; color: #fff; padding: 15px; }
+        .btn-floor.selected { background: var(--main-color); color: #000; }
         
-        /* 새로운 기능 버튼들 */
-        .btn-kakao { background: #fae100; color: #3c1e1e; width: 100%; margin-top: 10px; padding: 12px; font-weight: 800; }
-        .btn-out { background: #ff453a; color: #fff; width: 100%; margin-top: 10px; padding: 15px; }
-        .memo-chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; justify-content: center; }
-        .chip { background: #444; color: #ccc; padding: 6px 12px; border-radius: 20px; font-size: 12px; }
+        /* 간편 입력 칩 스타일 (Toggle 방식) */
+        .memo-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; justify-content: center; }
+        .chip { background: #2c2c2e; color: #888; padding: 8px 15px; border-radius: 20px; font-size: 13px; border: 1px solid #444; }
+        .chip.active { background: #0a84ff; color: #fff; border-color: #0a84ff; }
         
+        .btn-kakao { background: #fae100; color: #3c1e1e; width: 100%; margin-top: 10px; padding: 15px; font-weight: 800; font-size: 16px; }
+        .btn-out { background: #ff453a; color: #fff; width: 100%; margin-top: 10px; padding: 15px; font-size: 16px; }
         .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+        
         .hidden { display: none !important; }
-        .memo-input { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 90%; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: center; }
+        .version-tag { font-size: 11px; color: #444; margin-top: 10px; padding-bottom: 20px; }
+        input[type="text"] { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 85%; padding: 12px; border-radius: 10px; margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <div class="tab-container">
-        <div id="tab-home" class="tab active" onclick="switchTab('home')">🏠 우리집</div>
-        <div id="tab-other" class="tab" onclick="switchTab('other')">📍 외부/기타</div>
+    <div class="tab-wrapper">
+        <button class="tab-toggle-btn" onclick="toggleTabs()">장소 전환 ▽</button>
+        <div id="tabContainer" class="tab-container collapsed">
+            <div id="tab-home" class="tab active" onclick="switchTab('home')">🏠 우리집</div>
+            <div id="tab-other" class="tab" onclick="switchTab('other')">📍 외부/기타</div>
+        </div>
     </div>
 
-    <div class="scroll-area">
+    <div id="mainView" class="scroll-area">
         <div class="card">
             <div class="img-box" id="mainImgBox"></div>
             <div class="btn-camera" onclick="document.getElementById('cameraIn').click()">📷</div>
             <input type="file" id="cameraIn" hidden accept="image/*" capture="environment" onchange="processImg(this, 'temp')">
             <div id="currentPos">--</div>
-            <div id="saveTime" style="font-size:13px; color:#888;">층수를 선택하세요</div>
-            <div id="durationTime" style="font-size:15px; font-weight:bold; margin-top:5px;"></div>
+            <div id="saveTime" style="font-size:12px; color:#888;">층수를 선택하세요</div>
+            <div id="durationTime" style="font-weight:bold; margin-top:3px; color:#30d158;"></div>
             
-            <input type="text" id="memoInput" class="memo-input" placeholder="기둥 번호 등 메모" oninput="saveMemo(this.value)">
+            <input type="text" id="memoInput" placeholder="기타 메모 입력" oninput="saveMemo(this.value)">
+            
             <div class="memo-chips">
-                <div class="chip" onclick="addMemo('엘베 근처')">엘베 근처</div>
-                <div class="chip" onclick="addMemo('입구 앞')">입구 앞</div>
-                <div class="chip" onclick="addMemo('기둥 ')">기둥</div>
+                <div id="chip-엘베" class="chip" onclick="toggleChip('엘베 근처')">엘베 근처</div>
+                <div id="chip-입구" class="chip" onclick="toggleChip('입구 앞')">입구 앞</div>
+                <div id="chip-기둥" class="chip" onclick="toggleChip('기둥')">기둥</div>
             </div>
         </div>
 
@@ -79,16 +87,31 @@
             <button class="btn-out" onclick="clearParking()">🚗 출차 완료 (기록 삭제)</button>
         </div>
         
-        <button style="background:none; color:#0a84ff; width:100%; margin-top:20px;" onclick="showView('setting')">⚙️ 설정 및 프로필</button>
+        <button style="background:none; color:#0a84ff; width:100%; margin-top:20px; font-size:14px;" onclick="showView('setting')">⚙️ 설정 및 프로필 변경</button>
+        
+        <div class="version-tag">Version 9.0 (PlusMe Custom)</div>
+    </div>
+
+    <div id="settingView" class="scroll-area hidden">
+        <div class="card">
+            <h3>🖼️ 프로필 구도 설정</h3>
+            <div class="img-box" id="dragArea" style="border: 2px solid #30d158; touch-action: none;"></div>
+            <button onclick="document.getElementById('profileIn').click()" style="background:#444; color:#fff; width:100%; margin-top:10px; padding:12px;">사진 선택</button>
+            <input type="file" id="profileIn" hidden accept="image/*" onchange="processImg(this, 'profile')">
+            <p style="font-size:12px; color:#888; margin-top:15px;">버튼 구성 (설정)</p>
+            <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
+            <button onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:20px; padding:15px;">설정 저장</button>
+            <button onclick="showView('main')" style="background:none; color:#ff453a; width:100%; margin-top:10px;">취소</button>
+        </div>
     </div>
 </div>
 
 <script>
-    const storeKey = 'parking_v8';
+    const storeKey = 'parking_v9_final';
     let config = JSON.parse(localStorage.getItem(storeKey)) || {
         currentTab: 'home',
-        home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, lat: null, lng: null, memo: '' },
-        other: { profile: '', temp: '', pos: '--', floors: ['1F', 'B1', 'B2'], time: '', timestamp: null, lat: null, lng: null, memo: '' }
+        home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, lat: null, lng: null, memo: '', activeChips: [] },
+        other: { profile: '', temp: '', pos: '--', floors: ['1F', 'B1', 'B2'], time: '', timestamp: null, lat: null, lng: null, memo: '', activeChips: [] }
     };
 
     function init() {
@@ -98,7 +121,7 @@
         
         const mainBox = document.getElementById('mainImgBox');
         const imgUrl = data.temp || data.profile;
-        mainBox.innerHTML = imgUrl ? `<img src="${imgUrl}">` : `<div style="font-size:50px">🚗</div>`;
+        mainBox.innerHTML = imgUrl ? `<img src="${imgUrl}" style="object-position: center ${data.imgY || 50}%">` : `<div style="font-size:50px">🚗</div>`;
         
         const btnGrid = document.getElementById('floorButtons');
         btnGrid.innerHTML = '';
@@ -115,7 +138,28 @@
         document.getElementById('memoInput').value = data.memo || '';
         document.getElementById('actionBtns').classList.toggle('hidden', data.pos === '--' && !data.temp);
         
+        // 칩 상태 업데이트
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        (data.activeChips || []).forEach(text => {
+            const id = text.split(' ')[0]; 
+            const el = document.getElementById('chip-' + id);
+            if(el) el.classList.add('active');
+        });
+
         updateDuration();
+    }
+
+    function toggleTabs() {
+        document.getElementById('tabContainer').classList.toggle('collapsed');
+    }
+
+    function toggleChip(text) {
+        const data = config[config.currentTab];
+        if(!data.activeChips) data.activeChips = [];
+        const idx = data.activeChips.indexOf(text);
+        if(idx > -1) data.activeChips.splice(idx, 1);
+        else data.activeChips.push(text);
+        save(); init();
     }
 
     function recordPosition(f) {
@@ -127,52 +171,111 @@
 
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
-                data.lat = pos.coords.latitude;
-                data.lng = pos.coords.longitude;
+                data.lat = pos.coords.latitude; data.lng = pos.coords.longitude;
                 save(); init();
             }, () => { save(); init(); }, { enableHighAccuracy: true });
         } else { save(); init(); }
     }
 
-    function addMemo(text) {
-        const input = document.getElementById('memoInput');
-        input.value += text;
-        saveMemo(input.value);
-    }
-
     function shareLocation() {
         const data = config[config.currentTab];
+        const chipsText = data.activeChips.length > 0 ? `\n특이사항: ${data.activeChips.join(', ')}` : "";
         const mapUrl = data.lat ? `\n📍 지도: https://map.kakao.com/link/map/주차위치,${data.lat},${data.lng}` : "";
-        const text = `[내 차 어디?]\n위치: ${data.pos}\n시간: ${data.time}\n메모: ${data.memo || '없음'}${mapUrl}`;
+        const text = `[내 차 어디?]\n위치: ${data.pos}\n시간: ${data.time}\n메모: ${data.memo || '없음'}${chipsText}${mapUrl}`;
         
-        // 클립보드 복사 후 안내 (카톡으로 바로 보내기는 API 연동이 복잡하므로 복사 방식이 가장 깔끔합니다)
         navigator.clipboard.writeText(text).then(() => {
-            alert("주차 정보가 복사되었습니다! 카톡창에 붙여넣기 하세요.");
+            alert("주차 정보가 복사되었습니다! 카톡에 붙여넣으세요.");
         });
     }
 
-    // (기타 save, clearParking, processImg 로직은 이전과 동일)
-    function save() { localStorage.setItem(storeKey, JSON.stringify(config)); }
-    function saveMemo(val) { config[config.currentTab].memo = val; save(); }
-    function switchTab(t) { config.currentTab = t; save(); init(); }
-    function clearParking() {
-        if(confirm("출차하셨나요?")) {
+    function showView(v) {
+        document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
+        document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
+        if (v === 'setting') {
             const data = config[config.currentTab];
-            data.pos = '--'; data.time = ''; data.timestamp = null; data.temp = ''; data.lat = null; data.lng = null; data.memo = '';
+            const dragArea = document.getElementById('dragArea');
+            dragArea.innerHTML = data.profile ? `<img id="previewImg" src="${data.profile}" style="object-position: center ${data.imgY || 50}%">` : `<div style="font-size:50px">🚗</div>`;
+            renderSetupGrid();
+        }
+    }
+
+    function renderSetupGrid() {
+        const grid = document.getElementById('setupGrid'); grid.innerHTML = '';
+        const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9'];
+        const cur = config[config.currentTab].floors;
+        ALL.forEach(f => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-floor' + (cur.includes(f) ? ' selected' : '');
+            btn.style.fontSize = '12px'; btn.innerText = f;
+            btn.onclick = () => {
+                const i = cur.indexOf(f);
+                if (i > -1) cur.splice(i, 1); else cur.push(f);
+                renderSetupGrid();
+            };
+            grid.appendChild(btn);
+        });
+    }
+
+    function clearParking() {
+        if(confirm("출차하셨나요? 모든 기록이 지워집니다.")) {
+            const data = config[config.currentTab];
+            data.pos = '--'; data.time = ''; data.timestamp = null; data.temp = ''; data.lat = null; data.lng = null; data.memo = ''; data.activeChips = [];
             save(); init();
         }
     }
+
+    function processImg(input, mode) {
+        if (!input.files || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const max = 500; let w = img.width, h = img.height;
+                if (w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const compressed = canvas.toDataURL('image/jpeg', 0.3); 
+                if (mode === 'temp') { config[config.currentTab].temp = compressed; save(); init(); }
+                else { config[config.currentTab].profile = compressed; config[config.currentTab].temp = ''; showView('setting'); }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    function save() { localStorage.setItem(storeKey, JSON.stringify(config)); }
+    function saveMemo(val) { config[config.currentTab].memo = val; save(); }
+    function saveAllSettings() { save(); showView('main'); init(); }
+    function switchTab(t) { config.currentTab = t; save(); init(); }
     function updateDuration() {
         const data = config[config.currentTab];
         const div = document.getElementById('durationTime');
         if (data.timestamp) {
             const diff = new Date().getTime() - data.timestamp;
-            const h = Math.floor(diff / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
+            const h = Math.floor(diff / 3600000); const m = Math.floor((diff % 3600000) / 60000);
             div.innerText = h > 0 ? `⏱ ${h}시간 ${m}분째 주차 중` : `⏱ ${m}분째 주차 중`;
             div.style.color = h >= 2 ? '#ff453a' : '#30d158';
         } else { div.innerText = ""; }
     }
+    
+    // 드래그 구도 설정 로직
+    let isDragging = false, startY, startYPos;
+    document.getElementById('dragArea').addEventListener('touchstart', (e) => {
+        isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY || 50;
+    });
+    window.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const y = e.touches[0].pageY;
+        let nextY = startYPos - (y - startY) / 2;
+        if (nextY < 0) nextY = 0; if (nextY > 100) nextY = 100;
+        config[config.currentTab].imgY = nextY;
+        const img = document.getElementById('previewImg');
+        if (img) img.style.objectPosition = `center ${nextY}%`;
+    });
+    window.addEventListener('touchend', () => { isDragging = false; });
+
     setInterval(updateDuration, 60000);
     init();
 </script>
