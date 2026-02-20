@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="내 차 어디?">
-    <title>내 차 어디? - mongme</title>
+    <title>내 차 어디? - moneme</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #000; color: #fff; text-align: center; margin: 0; padding: 15px; -webkit-user-select: none; }
         .card { background: #1c1c1e; border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; position: relative; overflow: hidden; }
@@ -22,7 +22,7 @@
         .btn-floor { background: #3a3a3c; color: #fff; }
         .btn-floor.selected { background: #f39c12 !important; color: #000 !important; }
         .btn-out { background: #ff453a; color: #fff; width: 100%; margin-top: 15px; padding: 20px; font-size: 18px; }
-        .btn-map { background: #0a84ff; color: #fff; width: 80%; margin: 10px auto; padding: 12px; font-size: 14px; border-radius: 10px; display: block; }
+        .btn-map { background: #fae100; color: #3c1e1e; width: 85%; margin: 10px auto; padding: 14px; font-size: 15px; border-radius: 12px; display: block; font-weight: 800; }
         .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; color: #fff; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; z-index: 10; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
         #durationTime { font-size: 16px; color: #30d158; font-weight: bold; margin-top: 5px; height: 20px; }
         .memo-input { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 80%; padding: 12px; border-radius: 10px; margin: 10px 0; text-align: center; font-size: 15px; }
@@ -44,7 +44,7 @@
         <div id="currentPos">--</div>
         <p id="saveTime" style="font-size:13px; color:#888; margin-bottom:5px;">층수를 선택하세요</p>
         <div id="durationTime"></div>
-        <button id="mapBtn" class="btn-map hidden" onclick="openMap()">📍 지도에서 내 차 찾기</button>
+        <button id="mapBtn" class="btn-map hidden" onclick="openMap()">💛 카카오맵에서 내 차 찾기</button>
         <input type="text" id="memoInput" class="memo-input" placeholder="메모 (예: 기둥번호)" oninput="saveMemo(this.value)">
     </div>
     <div class="card">
@@ -70,7 +70,7 @@
 </div>
 
 <script>
-    const storeKey = 'parking_v7_final';
+    const storeKey = 'parking_v7_kakao'; // 버전을 올려서 카카오맵 기준 저장
     let config = JSON.parse(localStorage.getItem(storeKey)) || {
         currentTab: 'home',
         home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, imgY: 50, lat: null, lng: null, memo: '' },
@@ -121,10 +121,12 @@
         } else { save(); init(); }
     }
 
+    // ⭐ 카카오맵 연동 핵심 함수
     function openMap() {
         const data = config[config.currentTab];
-        if (data.lat) {
-            const url = `https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lng}`;
+        if (data.lat && data.lng) {
+            // 카카오맵 목적지 공유 URL 포맷
+            const url = `https://map.kakao.com/link/map/내차위치,${data.lat},${data.lng}`;
             window.open(url, '_blank');
         }
     }
@@ -139,6 +141,7 @@
         }
     }
 
+    // (이미지 처리 및 기타 공통 함수들 생략없이 포함)
     function processImg(input, mode) {
         if (!input.files || !input.files[0]) return;
         const reader = new FileReader();
@@ -153,15 +156,13 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
                 const compressed = canvas.toDataURL('image/jpeg', 0.3); 
-                
                 if (mode === 'temp') {
                     config[config.currentTab].temp = compressed;
                     save(); init();
                 } else {
                     config[config.currentTab].profile = compressed;
                     config[config.currentTab].temp = '';
-                    const dragArea = document.getElementById('dragArea');
-                    dragArea.innerHTML = `<img id="previewImg" src="${compressed}" style="object-position: center ${config[config.currentTab].imgY}%">`;
+                    document.getElementById('dragArea').innerHTML = `<img id="previewImg" src="${compressed}" style="object-position: center ${config[config.currentTab].imgY}%">`;
                 }
             };
             img.src = e.target.result;
@@ -215,7 +216,6 @@
     function switchTab(t) { config.currentTab = t; save(); init(); }
     function confirmReset() { if(confirm("초기화할까요?")) { localStorage.clear(); location.reload(); } }
 
-    // 드래그 로직
     let isDragging = false, startY, startYPos;
     document.getElementById('dragArea').addEventListener('touchstart', (e) => {
         isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY;
