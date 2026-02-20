@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="플러스미 주차">
-    
     <title>내 차 어디? - 플러스미</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #000; color: #fff; text-align: center; margin: 0; padding: 15px; -webkit-user-select: none; }
         .card { background: #1c1c1e; border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; position: relative; }
         .tab-container { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab { flex: 1; padding: 15px; background: #2c2c2e; border-radius: 12px; color: #888; border: 1px solid #444; }
+        .tab { flex: 1; padding: 15px; background: #2c2c2e; border-radius: 12px; color: #888; border: 1px solid #444; cursor:pointer; }
         .tab.active { background: #f39c12; color: #000; font-weight: bold; border: none; }
         .img-box { width: 100%; height: 220px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #444; touch-action: none; }
         .img-box img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
@@ -26,7 +24,7 @@
         .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; color: #fff; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; z-index: 10; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
         .btn-sub { background: none; color: #0a84ff; margin-top: 15px; display: block; width: 100%; font-size: 16px; }
         .hidden { display: none !important; }
-        #durationTime { font-size: 16px; color: #30d158; font-weight: bold; margin-top: 5px; }
+        #durationTime { font-size: 16px; color: #30d158; font-weight: bold; margin-top: 5px; height: 20px; }
     </style>
 </head>
 <body>
@@ -39,9 +37,9 @@
     <div class="card">
         <div class="img-box" id="mainImgBox"></div>
         <div class="btn-camera" onclick="document.getElementById('cameraIn').click()">📷</div>
-        <input type="file" id="cameraIn" hidden accept="image/*" capture="environment" onchange="handlePhoto(this)">
+        <input type="file" id="cameraIn" hidden accept="image/*" capture="environment" onchange="processImg(this, 'temp')">
         <div id="currentPos">--</div>
-        <p id="saveTime" style="font-size:13px; color:#888; margin-bottom:0;">층수를 선택하세요</p>
+        <p id="saveTime" style="font-size:13px; color:#888; margin-bottom:5px;">층수를 선택하세요</p>
         <div id="durationTime"></div>
     </div>
     <div class="card"><div id="floorButtons" class="btn-grid"></div></div>
@@ -52,8 +50,9 @@
     <div class="card">
         <h3 style="margin:0 0 10px 0">🖼️ 프로필 구도 설정</h3>
         <div class="img-box" id="dragArea" style="border: 2px solid #30d158;"></div>
-        <button onclick="document.getElementById('profileIn').click()" style="background:#444; color:#fff; width:100%; margin-top:10px;">사진 선택</button>
-        <input type="file" id="profileIn" hidden accept="image/*" onchange="handleProfilePhoto(this)">
+        <p style="font-size:12px; color:#30d158; margin:10px 0;">↕ 사진을 드래그하여 위치를 맞추세요</p>
+        <button onclick="document.getElementById('profileIn').click()" style="background:#444; color:#fff; width:100%;">사진 선택</button>
+        <input type="file" id="profileIn" hidden accept="image/*" onchange="processImg(this, 'profile')">
         <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
         <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
         <button onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:20px; padding:20px;">설정 저장 및 적용</button>
@@ -62,7 +61,7 @@
 </div>
 
 <script>
-    const storeKey = 'parking_final_v2'; // 버전을 올려 기존 데이터와 충돌 방지
+    const storeKey = 'parking_final_v4'; // 확실한 초기화를 위해 v4로 업데이트
     let config = JSON.parse(localStorage.getItem(storeKey)) || {
         currentTab: 'home',
         home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, imgY: 50 },
@@ -74,11 +73,9 @@
         const data = config[cur];
         document.getElementById('tab-home').className = 'tab' + (cur === 'home' ? ' active' : '');
         document.getElementById('tab-other').className = 'tab' + (cur === 'other' ? ' active' : '');
-        
         const mainBox = document.getElementById('mainImgBox');
         const imgUrl = data.temp || data.profile;
         mainBox.innerHTML = imgUrl ? `<img src="${imgUrl}" style="object-position: center ${data.imgY}%">` : `<div style="font-size:60px">🚗</div>`;
-        
         const btnGrid = document.getElementById('floorButtons');
         btnGrid.innerHTML = '';
         data.floors.forEach(f => {
@@ -88,60 +85,54 @@
             btn.onclick = () => {
                 const now = new Date();
                 data.pos = f;
-                // 날짜 포맷 (예: 2월 21일 14:30)
                 data.time = `${now.getMonth()+1}월 ${now.getDate()}일 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-                data.timestamp = now.getTime(); // 계산용 타임스탬프 저장
+                data.timestamp = now.getTime();
                 save(); init();
             };
             btnGrid.appendChild(btn);
         });
-        
         document.getElementById('currentPos').innerText = data.pos;
         document.getElementById('saveTime').innerText = data.time ? "기록: " + data.time : "층수를 선택하세요";
         updateDuration();
     }
 
-    // 경과 시간 실시간 계산 함수
     function updateDuration() {
         const data = config[config.currentTab];
-        const durationDiv = document.getElementById('durationTime');
-        
+        const div = document.getElementById('durationTime');
         if (data.timestamp) {
-            const now = new Date().getTime();
-            const diff = now - data.timestamp;
-            
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            
-            if (hours > 0) {
-                durationDiv.innerText = `⏱ 주차 중: ${hours}시간 ${mins}분째`;
-            } else {
-                durationDiv.innerText = `⏱ 주차 중: ${mins}분째`;
-            }
-        } else {
-            durationDiv.innerText = "";
-        }
+            const diff = new Date().getTime() - data.timestamp;
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            div.innerText = h > 0 ? `⏱ 주차 중: ${h}시간 ${m}분째` : `⏱ 주차 중: ${m}분째`;
+        } else { div.innerText = ""; }
     }
-
-    // 1분마다 경과 시간 자동 갱신
     setInterval(updateDuration, 60000);
 
-    // 사진 처리 및 기타 함수 (기존과 동일)
-    function handlePhoto(input) {
+    // 이미지 압축 통합 함수 (용량 문제 해결 핵심)
+    function processImg(input, mode) {
         if (!input.files || !input.files[0]) return;
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const max = 800;
+                const max = 600; // 용량 확보를 위해 600px로 최적화
                 let w = img.width, h = img.height;
                 if (w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
                 canvas.width = w; canvas.height = h;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
-                config[config.currentTab].temp = canvas.toDataURL('image/jpeg', 0.6);
-                save(); init();
+                const compressed = canvas.toDataURL('image/jpeg', 0.5); // 압축률 0.5로 강화
+                
+                if (mode === 'temp') {
+                    config[config.currentTab].temp = compressed;
+                    save(); init();
+                } else {
+                    config[config.currentTab].profile = compressed;
+                    config[config.currentTab].temp = '';
+                    const dragArea = document.getElementById('dragArea');
+                    dragArea.innerHTML = `<img id="previewImg" src="${compressed}" style="object-position: center ${config[config.currentTab].imgY}%">`;
+                }
             };
             img.src = e.target.result;
         };
@@ -151,28 +142,18 @@
     function showView(v) {
         document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
         document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
-        if (v === 'setting') renderSetupGrid();
-    }
-
-    function handleProfilePhoto(input) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            config[config.currentTab].profile = e.target.result;
-            config[config.currentTab].temp = '';
-            showView('setting');
+        if (v === 'setting') {
+            const data = config[config.currentTab];
             const dragArea = document.getElementById('dragArea');
-            dragArea.innerHTML = `<img id="previewImg" src="${e.target.result}" style="object-position: center ${config[config.currentTab].imgY}%">`;
-        };
-        reader.readAsDataURL(input.files[0]);
+            dragArea.innerHTML = data.profile ? `<img id="previewImg" src="${data.profile}" style="object-position: center ${data.imgY}%">` : `<div style="font-size:60px">🚗</div>`;
+            renderSetupGrid();
+        }
     }
 
-    // 드래그 로직
     let isDragging = false, startY, startYPos;
     const dragArea = document.getElementById('dragArea');
     dragArea.addEventListener('touchstart', (e) => {
-        isDragging = true;
-        startY = e.touches[0].pageY;
-        startYPos = config[config.currentTab].imgY;
+        isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY;
     }, {passive: false});
     window.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
@@ -202,7 +183,13 @@
         });
     }
 
-    function save() { localStorage.setItem(storeKey, JSON.stringify(config)); }
+    function save() { 
+        try {
+            localStorage.setItem(storeKey, JSON.stringify(config)); 
+        } catch(e) {
+            alert("용량이 부족하여 저장되지 않았습니다. 다른 사진을 선택해 주세요.");
+        }
+    }
     function saveAllSettings() { save(); showView('main'); init(); }
     function switchTab(t) { config.currentTab = t; save(); init(); }
 
@@ -210,4 +197,3 @@
 </script>
 </body>
 </html>
-
