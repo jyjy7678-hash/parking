@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>내 차 어디? - 플러스미</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background-color: #000; color: white; text-align: center; padding: 15px; margin: 0; -webkit-user-select: none; overflow-x: hidden; }
+        .card { background: #1c1c1e; border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; position: relative; }
+        
+        .tab-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab { flex: 1; padding: 15px; background: #2c2c2e; border-radius: 12px; font-size: 15px; color: #888; border: 1px solid #444; }
+        .tab.active { background: #f39c12; color: #000; font-weight: bold; border: none; }
+
+        .img-box { width: 100%; height: 220px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #444; position: relative; touch-action: none; }
+        .img-box img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        
+        #dragArea { border: 2px solid #30d158; touch-action: none !important; }
+        .dragging img { opacity: 0.7; }
+
+        .btn-camera-float { position: absolute; bottom: 10px; right: 10px; background: #30d158; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #fff; z-index: 30; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        button { padding: 18px; font-size: 16px; border-radius: 15px; border: none; cursor: pointer; font-weight: bold; -webkit-tap-highlight-color: transparent; }
+        .btn-floor { background-color: #3a3a3c; color: white; }
+        .btn-floor.selected { background-color: #f39c12 !important; color: #000 !important; transform: scale(0.95); }
+
+        .btn-main { background-color: #30d158; color: white; width: 100%; margin-top: 15px; }
+        .btn-sub { background-color: transparent; color: #0a84ff; margin-top: 15px; font-size: 16px; border:none; display: block; width: 100%; }
+        
+        #currentPos { font-size: 52px; font-weight: 900; color: #ffd60a; margin: 10px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="mainView">
+    <div class="tab-container">
+        <div id="tab-home" class="tab active" onclick="switchTab('home')">🏠 우리집</div>
+        <div id="tab-other" class="tab" onclick="switchTab('other')">📍 외부/기타</div>
+    </div>
+    <div class="card">
+        <button style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.6); color:#fff; padding:8px; border-radius:8px; z-index:20; font-size:11px;" onclick="resetToProfile()">기본사진 복구</button>
+        <div class="btn-camera-float" onclick="document.getElementById('homeTempIn').click()">📷</div>
+        <input type="file" id="homeTempIn" hidden accept="image/*" capture="environment" onchange="saveFile(this, 'tempImg')">
+        <div class="img-box" id="mainImgBox"></div>
+        <div id="currentPos">--</div>
+        <p id="saveTime" style="font-size: 13px; color: #8e8e93;">층수를 터치하세요</p>
+    </div>
+    <div class="card"><div id="floorButtons" class="btn-grid"></div></div>
+    <button class="btn-sub" onclick="showView('setting')">⚙️ 주차 층 설정 & 프로필 조절</button>
+</div>
+
+<div id="settingView" class="hidden">
+    <div class="card">
+        <h3 style="margin:0 0 10px 0">🖼️ 프로필 구도 맞추기</h3>
+        <div id="dragArea" class="img-box">
+            <div id="settingPlaceholder" style="font-size:60px;">🚗</div>
+            <img id="settingImgPreview" src="" class="hidden">
+        </div>
+        <p style="color:#30d158; font-size:12px; margin:10px 0; font-weight:bold;">↕ 사진 박스를 위아래로 밀어보세요</p>
+        <button class="btn-main" style="background:#444;" onclick="document.getElementById('profileIn').click()">사진 새로 선택</button>
+        <input type="file" id="profileIn" hidden accept="image/*" onchange="saveFile(this, 'profileImg')">
+        
+        <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+        <h3 style="margin:0 0 10px 0">🏢 사용중인 층 (초록색)</h3>
+        <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
+        
+        <button class="btn-main" onclick="saveAllSettings()">설정 저장 완료</button>
+        <button class="btn-sub" onclick="showView('main')" style="color:#ff453a;">취소</button>
+    </div>
+</div>
+
+<script>
+    let config = JSON.parse(localStorage.getItem('parkingConfig')) || {
+        currentTab: 'home', profileImg: '', tempImg: '', imgPos: 50,
+        homeFloors: ['B1', 'B2', 'B3'], otherFloors: ['1F', 'B1', 'B2', 'B3', 'B4', 'B5'],
+        lastHomePos: '--', lastOtherPos: '--'
+    };
+
+    let isDragging = false, startY, startImgPos;
+
+    function init() {
+        document.getElementById('tab-home').className = 'tab' + (config.currentTab === 'home' ? ' active' : '');
+        document.getElementById('tab-other').className = 'tab' + (config.currentTab === 'other' ? ' active' : '');
+
+        const displayImg = config.tempImg || config.profileImg;
+        document.getElementById('mainImgBox').innerHTML = displayImg ? `<img src="${displayImg}" style="object-position: center ${config.imgPos}%">` : `<div style="font-size:60px">🚗</div>`;
+
+        const setImg = document.getElementById('settingImgPreview');
+        const setPlace = document.getElementById('settingPlaceholder');
+        if (config.profileImg) {
+            setImg.src = config.profileImg;
+            setImg.style.objectPosition = `center ${config.imgPos}%`;
+            setImg.classList.remove('hidden'); setPlace.classList.add('hidden');
+        } else {
+            setImg.classList.add('hidden'); setPlace.classList.remove('hidden');
+        }
+
+        const floors = config.currentTab === 'home' ? config.homeFloors : config.otherFloors;
+        const currentPos = config.currentTab === 'home' ? config.lastHomePos : config.lastOtherPos;
+        const btnGrid = document.getElementById('floorButtons');
+        btnGrid.innerHTML = '';
+        floors.forEach(f => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-floor' + (currentPos === f ? ' selected' : '');
+            btn.innerText = f;
+            btn.onclick = () => {
+                if (config.currentTab === 'home') config.lastHomePos = f; else config.lastOtherPos = f;
+                saveParking();
+            };
+            btnGrid.appendChild(btn);
+        });
+        document.getElementById('currentPos').innerText = currentPos;
+    }
+
+    const dragArea = document.getElementById('dragArea');
+    const handleStart = (e) => {
+        if (!config.profileImg) return;
+        isDragging = true;
+        dragArea.classList.add('dragging');
+        startY = (e.touches ? e.touches[0].pageY : e.pageY);
+        startImgPos = parseFloat(config.imgPos);
+    };
+    const handleMove = (e) => {
+        if (!isDragging) return;
+        if (e.cancelable) e.preventDefault();
+        const currentY = (e.touches ? e.touches[0].pageY : e.pageY);
+        const diff = (currentY - startY) / 1.5;
+        let newPos = startImgPos - diff;
+        if (newPos < 0) newPos = 0; if (newPos > 100) newPos = 100;
+        config.imgPos = newPos;
+        document.getElementById('settingImgPreview').style.objectPosition = `center ${newPos}%`;
+    };
+    const handleEnd = () => { 
+        isDragging = false; 
+        dragArea.classList.remove('dragging');
+        localStorage.setItem('parkingConfig', JSON.stringify(config)); 
+    };
+
+    dragArea.addEventListener('touchstart', handleStart, { passive: false });
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+    dragArea.addEventListener('mousedown', handleStart);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+
+    function saveFile(input, key) {
+        if (!input.files || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (e) => { 
+            config[key] = e.target.result; 
+            if (key === 'profileImg') config.tempImg = '';
+            localStorage.setItem('parkingConfig', JSON.stringify(config)); 
+            init();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    function switchTab(t) { config.currentTab = t; init(); }
+    
+    function saveParking() {
+        const now = new Date();
+        const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+        localStorage.setItem('parkingConfig', JSON.stringify(config));
+        init();
+        document.getElementById('saveTime').innerText = "기록 시간: " + time;
+    }
+
+    function resetToProfile() {
+        if(confirm("임시 사진을 지우고 기본 사진으로 돌아갈까요?")) {
+            config.tempImg = '';
+            localStorage.setItem('parkingConfig', JSON.stringify(config));
+            init();
+        }
+    }
+
+    function showView(v) { 
+        document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
+        document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
+        if (v === 'setting') renderSetupGrid();
+    }
+
+    function renderSetupGrid() {
+        const grid = document.getElementById('setupGrid'); grid.innerHTML = '';
+        const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9'];
+        const cur = config.currentTab === 'home' ? config.homeFloors : config.otherFloors;
+        ALL.forEach(f => {
+            const btn = document.createElement('button');
+            btn.style.padding = '12px 2px'; btn.style.fontSize = '12px';
+            btn.className = (cur.includes(f) ? 'btn-floor selected' : 'btn-floor');
+            btn.innerText = f;
+            btn.onclick = () => {
+                const idx = cur.indexOf(f);
+                if (idx > -1) cur.splice(idx, 1); else cur.push(f);
+                renderSetupGrid();
+            };
+            grid.appendChild(btn);
+        });
+    }
+
+    function saveAllSettings() { 
+        localStorage.setItem('parkingConfig', JSON.stringify(config)); 
+        showView('main'); 
+        init(); 
+    }
+
+    init();
+</script>
+</body>
+</html>
