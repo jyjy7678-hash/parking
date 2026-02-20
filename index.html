@@ -17,26 +17,25 @@
         .tab.active { background: var(--main-color); color: #000; border: none; }
         .card { background: var(--card-bg); border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #333; position: relative; }
         .img-box { width: 100%; height: 180px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
-        .img-box img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        .img-box img { width: 100%; height: 100%; object-fit: cover; }
         .info-row { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 5px 0; }
         #currentPos { font-size: 56px; font-weight: 900; color: #ffd60a; margin: 0; }
         .time-info { text-align: left; }
         #saveTime { font-size: 11px; color: #888; }
         #durationTime { font-size: 14px; font-weight: bold; color: #30d158; }
         .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        button { border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.1s; }
+        button { border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
         .btn-floor { background: #3a3a3c; color: #fff; padding: 15px; font-size: 16px; }
         .btn-floor.selected { background: var(--main-color); color: #000; }
-        .memo-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; justify-content: center; }
-        .chip { background: #2c2c2e; color: #888; padding: 8px 12px; border-radius: 20px; font-size: 12px; border: 1px solid #444; }
-        .chip.active { background: #0a84ff; color: #fff; border-color: #0a84ff; }
         .btn-map { background: #fae100; color: #3c1e1e; width: 100%; margin-top: 8px; padding: 12px; font-weight: 800; }
-        .btn-kakao { background: #444; color: #fff; width: 100%; margin-top: 8px; padding: 12px; }
         .btn-out { background: #ff453a; color: #fff; width: 100%; margin-top: 10px; padding: 15px; }
-        .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; z-index: 5; }
+        .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
         .hidden { display: none !important; }
         .version-tag { font-size: 10px; color: #444; margin: 15px 0; text-align: center; }
         input[type="text"] { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 100%; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: center; box-sizing: border-box; }
+        
+        /* 초기화 버튼 스타일 */
+        .btn-reset { background: none; color: #ff453a; border: 1px solid #ff453a; width: 100%; padding: 12px; margin-top: 30px; border-radius: 10px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -60,20 +59,14 @@
                 </div>
             </div>
             <input type="text" id="memoInput" placeholder="기타 메모 입력" oninput="saveMemo(this.value)">
-            <div class="memo-chips">
-                <div id="chip-엘베" class="chip" onclick="toggleChip('엘베 근처')">엘베 근처</div>
-                <div id="chip-입구" class="chip" onclick="toggleChip('입구 앞')">입구 앞</div>
-                <div id="chip-기둥" class="chip" onclick="toggleChip('기둥')">기둥</div>
-            </div>
         </div>
         <div class="card"><div id="floorButtons" class="btn-grid"></div></div>
         <div id="actionBtns" class="hidden">
             <button class="btn-map" onclick="openMap()">💛 카카오맵 위치 확인</button>
-            <button class="btn-kakao" onclick="shareLocation()">🔗 위치 복사(공유)</button>
             <button class="btn-out" onclick="clearParking()">🚗 출차 완료</button>
         </div>
         <button style="background:none; color:#0a84ff; width:100%; margin-top:15px; font-size:13px;" onclick="showView('setting')">⚙️ 설정 및 프로필 변경</button>
-        <div class="version-tag">Version 9.5 (Save Fix)</div>
+        <div class="version-tag">Version 9.6 (Reset & High-Res)</div>
     </div>
 
     <div id="settingView" class="scroll-area hidden">
@@ -84,18 +77,21 @@
             <input type="file" id="profileIn" hidden accept="image/*" onchange="processImg(this, 'profile')">
             <p style="font-size:12px; color:#888; margin-top:15px;">버튼 구성 설정</p>
             <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
-            <button id="saveSetBtn" onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:20px; padding:15px; font-size:16px;">설정 저장 및 적용</button>
-            <button onclick="showView('main')" style="background:none; color:#ff453a; width:100%; margin-top:10px; padding-bottom:20px;">취소</button>
+            <button id="saveSetBtn" onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:20px; padding:15px;">설정 저장 및 적용</button>
+            
+            <button class="btn-reset" onclick="resetAppData()">🗑️ 저장공간 비우기 (앱 초기화)</button>
+            
+            <button onclick="showView('main')" style="background:none; color:#888; width:100%; margin-top:10px; padding-bottom:20px;">취소</button>
         </div>
     </div>
 </div>
 
 <script>
-    const storeKey = 'parking_v9_5';
+    const storeKey = 'parking_v9_6';
     let config = JSON.parse(localStorage.getItem(storeKey)) || {
         currentTab: 'home',
-        home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, lat: null, lng: null, memo: '', activeChips: [], imgY: 50 },
-        other: { profile: '', temp: '', pos: '--', floors: ['1F', 'B1', 'B2'], time: '', timestamp: null, lat: null, lng: null, memo: '', activeChips: [], imgY: 50 }
+        home: { profile: '', temp: '', pos: '--', floors: ['B1', 'B2', 'B3'], time: '', timestamp: null, lat: null, lng: null, memo: '', imgY: 50 },
+        other: { profile: '', temp: '', pos: '--', floors: ['1F', 'B1', 'B2'], time: '', timestamp: null, lat: null, lng: null, memo: '', imgY: 50 }
     };
 
     function init() {
@@ -113,34 +109,33 @@
         document.getElementById('saveTime').innerText = d.time ? "기록: " + d.time : "기록 없음";
         document.getElementById('memoInput').value = d.memo || '';
         document.getElementById('actionBtns').classList.toggle('hidden', d.pos === '--' && !d.temp);
-        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-        (d.activeChips || []).forEach(t => { const el = document.getElementById('chip-' + t.split(' ')[0]); if(el) el.classList.add('active'); });
         updateDuration();
     }
 
     function processImg(input, mode) {
         if (!input.files || !input.files[0]) return;
-        const btn = mode === 'profile' ? document.getElementById('photoBtn') : null;
-        if(btn) btn.innerText = "처리 중...";
+        if(mode === 'profile') document.getElementById('photoBtn').innerText = "고화질 압축 중...";
         
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const max = 300; // 용량을 더 줄임
+                const max = 600; // 화질 개선을 위해 600px로 상향
                 let w = img.width, h = img.height;
                 if (w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                const compressed = canvas.toDataURL('image/jpeg', 0.4); 
+                // 화질 0.6으로 상향 (용량과 화질의 균형)
+                const compressed = canvas.toDataURL('image/jpeg', 0.6); 
                 
-                const d = config[config.currentTab];
                 if (mode === 'temp') {
-                    d.temp = compressed; save(); init();
+                    config[config.currentTab].temp = compressed; save(); init();
                 } else {
-                    d.profile = compressed; d.temp = ''; d.imgY = 50;
-                    if(btn) btn.innerText = "사진 선택";
+                    config[config.currentTab].profile = compressed;
+                    config[config.currentTab].temp = '';
+                    config[config.currentTab].imgY = 50;
+                    document.getElementById('photoBtn').innerText = "사진 선택";
                     showView('setting');
                 }
             };
@@ -149,21 +144,25 @@
         reader.readAsDataURL(input.files[0]);
     }
 
+    function resetAppData() {
+        if(confirm("앱의 모든 데이터(사진 포함)를 비울까요?\n저장 공간 부족 시 필수입니다.")) {
+            localStorage.removeItem(storeKey);
+            location.reload();
+        }
+    }
+
     function saveAllSettings() {
         const btn = document.getElementById('saveSetBtn');
         btn.innerText = "저장 중...";
-        btn.style.background = "#888";
-        
         setTimeout(() => {
             try {
                 save();
                 showView('main');
                 init();
             } catch(e) {
-                alert("저장 용량이 부족합니다. 다른 사진을 선택해 주세요.");
+                alert("여전히 용량이 부족합니다. '저장공간 비우기' 버튼을 먼저 눌러주세요!");
             } finally {
                 btn.innerText = "설정 저장 및 적용";
-                btn.style.background = "#30d158";
             }
         }, 100);
     }
@@ -180,11 +179,9 @@
     }
 
     function recordPosition(f) { const now = new Date(); const d = config[config.currentTab]; d.pos = f; d.time = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`; d.timestamp = now.getTime(); if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(p => { d.lat = p.coords.latitude; d.lng = p.coords.longitude; save(); init(); }, () => { save(); init(); }, { enableHighAccuracy: true }); } else { save(); init(); } }
-    function openMap() { const d = config[config.currentTab]; if (d.lat) window.open(`https://map.kakao.com/link/map/주차위치,${d.lat},${d.lng}`, '_blank'); else alert("좌표 정보가 없습니다."); }
-    function shareLocation() { const d = config[config.currentTab]; const chips = (d.activeChips || []).length > 0 ? `\n특이사항: ${d.activeChips.join(', ')}` : ""; const mapUrl = d.lat ? `\n📍 지도: https://map.kakao.com/link/map/주차위치,${d.lat},${d.lng}` : ""; const text = `[내 차 어디?]\n위치: ${d.pos}\n시간: ${d.time}\n메모: ${d.memo || '없음'}${chips}${mapUrl}`; navigator.clipboard.writeText(text).then(() => alert("복사 완료!")); }
-    function toggleChip(t) { const d = config[config.currentTab]; if(!d.activeChips) d.activeChips = []; const i = d.activeChips.indexOf(t); if(i > -1) d.activeChips.splice(i, 1); else d.activeChips.push(t); save(); init(); }
+    function openMap() { const d = config[config.currentTab]; if (d.lat) window.open(`https://map.kakao.com/link/map/주차위치,${d.lat},${d.lng}`, '_blank'); else alert("좌표가 없습니다."); }
     function renderSetupGrid() { const g = document.getElementById('setupGrid'); g.innerHTML = ''; const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9']; const cur = config[config.currentTab].floors; ALL.forEach(f => { const b = document.createElement('button'); b.className = 'btn-floor' + (cur.includes(f) ? ' selected' : ''); b.style.fontSize = '12px'; b.innerText = f; b.onclick = () => { const i = cur.indexOf(f); if (i > -1) cur.splice(i, 1); else cur.push(f); renderSetupGrid(); }; g.appendChild(b); }); }
-    function clearParking() { if(confirm("기록을 삭제할까요?")) { const d = config[config.currentTab]; d.pos = '--'; d.time = ''; d.timestamp = null; d.temp = ''; d.lat = null; d.lng = null; d.memo = ''; d.activeChips = []; save(); init(); } }
+    function clearParking() { if(confirm("기록을 삭제할까요?")) { const d = config[config.currentTab]; d.pos = '--'; d.time = ''; d.timestamp = null; d.temp = ''; d.lat = null; d.lng = null; d.memo = ''; save(); init(); } }
     function updateDuration() { const d = config[config.currentTab]; const div = document.getElementById('durationTime'); if (d.timestamp) { const diff = new Date().getTime() - d.timestamp; const h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000); div.innerText = h > 0 ? `⏱ ${h}시간 ${m}분째` : `⏱ ${m}분째`; div.style.color = h >= 2 ? '#ff453a' : '#30d158'; } else { div.innerText = ""; } }
     let isDragging = false, startY, startYPos;
     document.getElementById('dragArea').addEventListener('touchstart', (e) => { isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY || 50; });
