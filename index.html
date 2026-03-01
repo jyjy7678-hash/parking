@@ -6,7 +6,7 @@
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>내 차 어디? - 플러스미</title>
+    <title>내 차 어디? - v10.0</title>
     <style>
         :root { --main-color: #f39c12; --bg-color: #000; --card-bg: #1c1c1e; }
         html, body { width: 100%; height: 100%; background: var(--bg-color); color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 0; overflow: hidden; }
@@ -18,20 +18,27 @@
         .card { background: var(--card-bg); border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #333; position: relative; }
         .img-box { width: 100%; height: 180px; background: #2c2c2e; border-radius: 15px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
         .img-box img { width: 100%; height: 100%; object-fit: cover; }
-        #currentPos { font-size: 56px; font-weight: 900; color: #ffd60a; text-align: center; margin: 10px 0; }
+        
+        /* 층수와 시간 레이아웃 */
+        .info-row { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 10px 0; }
+        #currentPos { font-size: 64px; font-weight: 900; color: #ffd60a; margin: 0; line-height: 1; }
+        .time-box { text-align: left; }
+        #saveTime { font-size: 12px; color: #888; margin-bottom: 4px; }
+        #durationTime { font-size: 15px; font-weight: bold; color: #30d158; }
+
         .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        button { border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.1s; }
+        button { border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
         .btn-floor { background: #3a3a3c; color: #fff; padding: 15px; font-size: 16px; }
         .btn-floor.selected { background: var(--main-color); color: #000; }
-        .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+        .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; z-index: 10; }
         .hidden { display: none !important; }
-        input[type="text"] { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 100%; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: center; box-sizing: border-box; }
+        input[type="text"] { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 100%; padding: 12px; border-radius: 10px; margin-top: 10px; text-align: center; box-sizing: border-box; font-size: 14px; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; }
         .toggle-btn { background: #444; color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 12px; }
         .toggle-btn.on { background: #30d158; color: #fff; }
-        .icon-lib { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; padding: 10px; background: #2c2c2e; border-radius: 10px; }
+        .icon-lib { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; padding: 10px; background: #2c2c2e; border-radius: 10px; }
         .icon-item { aspect-ratio: 1; background: #3a3a3c; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #444; }
-        .btn-reset { background: none; color: #ff453a; border: 1px solid #ff453a; width: 100%; padding: 12px; margin-top: 20px; border-radius: 10px; font-size: 12px; }
+        .version-tag { font-size: 10px; color: #444; text-align: center; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -47,61 +54,60 @@
             <div class="img-box" id="mainImgBox"></div>
             <div class="btn-camera" onclick="document.getElementById('cameraIn').click()">📷</div>
             <input type="file" id="cameraIn" hidden accept="image/*" capture="environment" onchange="processImg(this, 'temp')">
-            <div id="currentPos">--</div>
-            <div style="text-align:center; font-size:12px; color:#888;" id="saveTime">기록 없음</div>
+            
+            <div class="info-row">
+                <div id="currentPos">--</div>
+                <div class="time-box">
+                    <div id="saveTime">기록 없음</div>
+                    <div id="durationTime"></div>
+                </div>
+            </div>
             <input type="text" id="memoInput" placeholder="기타 메모 입력" oninput="saveMemo(this.value)">
         </div>
+
         <div class="card"><div id="floorButtons" class="btn-grid"></div></div>
+
         <div id="actionBtns" class="hidden">
             <button style="background:#fae100; color:#3c1e1e; width:100%; margin-top:8px; padding:12px; font-weight:800; border-radius:12px;" onclick="openMap()">💛 카카오맵 위치 확인</button>
             <button style="background:#ff453a; color:#fff; width:100%; margin-top:10px; padding:15px; font-weight:bold; border-radius:12px;" onclick="clearParking()">🚗 출차 완료</button>
         </div>
-        <button style="background:none; color:#0a84ff; width:100%; margin:20px 0; font-size:13px;" onclick="showView('setting')">⚙️ 설정 및 프로필 변경</button>
+        
+        <button style="background:none; color:#0a84ff; width:100%; margin-top:15px; font-size:13px;" onclick="showView('setting')">⚙️ 설정 및 프로필 변경</button>
+        <div class="version-tag">Personal Project - Version 10.0</div>
     </div>
 
     <div id="settingView" class="scroll-area hidden">
         <div class="card">
             <h3 style="margin:0 0 15px 0;">🖼️ 프로필 설정</h3>
             <div class="img-box" id="dragArea" style="border: 2px solid #30d158; touch-action: none;"></div>
-            
             <div style="display:flex; gap:8px; margin-top:10px;">
                 <button onclick="document.getElementById('profileIn').click()" style="flex:1; background:#444; color:#fff; padding:12px;">📷 사진 촬영</button>
                 <button onclick="toggleIconLib()" style="flex:1; background:#444; color:#fff; padding:12px;">✨ 아이콘 선택</button>
             </div>
             <input type="file" id="profileIn" hidden accept="image/*" onchange="processImg(this, 'profile')">
-
-            <div id="iconLib" class="hidden">
-                <div class="icon-lib">
-                    <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/744/744465.png')">🚗</div>
-                    <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/3202/3202926.png')">🏎️</div>
-                    <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/2555/2555013.png')">🚙</div>
-                    <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/55/55283.png')">🏠</div>
-                </div>
-            </div>
-
+            <div id="iconLib" class="hidden"><div class="icon-lib">
+                <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/744/744465.png')">🚗</div>
+                <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/3202/3202926.png')">🏎️</div>
+                <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/2555/2555013.png')">🚙</div>
+                <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/55/55283.png')">🏠</div>
+            </div></div>
             <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
-            
-            <div class="setting-row">
-                <span>📍 현재 탭 GPS 사용</span>
-                <button id="gpsToggle" class="toggle-btn" onclick="toggleGPS()">OFF</button>
-            </div>
-
+            <div class="setting-row"><span>📍 현재 탭 GPS 사용</span><button id="gpsToggle" class="toggle-btn" onclick="toggleGPS()">OFF</button></div>
             <p style="font-size:12px; color:#888; margin-top:20px;">🏢 층수 버튼 구성 (현재 탭)</p>
             <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;"></div>
-
-            <button id="saveSetBtn" onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:25px; padding:15px; font-size:16px;">설정 저장 및 적용</button>
-            <button class="btn-reset" onclick="resetAppData()">🗑️ 앱 저장공간 비우기</button>
+            <button onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:25px; padding:15px; font-size:16px;">설정 저장 및 적용</button>
+            <button style="background:none; color:#ff453a; border:1px solid #ff453a; width:100%; padding:12px; margin-top:15px; border-radius:10px; font-size:12px;" onclick="resetAppData()">🗑️ 앱 저장공간 비우기</button>
             <button onclick="showView('main')" style="background:none; color:#888; width:100%; margin-top:15px; padding-bottom:30px;">취소</button>
         </div>
     </div>
 </div>
 
 <script>
-    const storeKey = 'parking_v9_9';
+    const storeKey = 'parking_v10_0';
     let config = JSON.parse(localStorage.getItem(storeKey)) || {
         currentTab: 'home',
-        home: { profile: '', useGPS: false, floors: ['B1', 'B2', 'B3'], imgY: 50, pos: '--' },
-        other: { profile: '', useGPS: true, floors: ['1F', 'B1', 'B2'], imgY: 50, pos: '--' }
+        home: { profile: '', useGPS: false, floors: ['B1', 'B2', 'B3'], imgY: 50, pos: '--', time: '', timestamp: null },
+        other: { profile: '', useGPS: true, floors: ['1F', 'B1', 'B2'], imgY: 50, pos: '--', time: '', timestamp: null }
     };
 
     function init() {
@@ -119,80 +125,47 @@
         document.getElementById('saveTime').innerText = d.time ? "기록: " + d.time : "기록 없음";
         document.getElementById('memoInput').value = d.memo || '';
         document.getElementById('actionBtns').classList.toggle('hidden', d.pos === '--' && !d.temp);
+        updateDuration();
     }
 
-    function toggleGPS() { config[config.currentTab].useGPS = !config[config.currentTab].useGPS; updateGPSToggle(); }
-    function updateGPSToggle() { const btn = document.getElementById('gpsToggle'); const isON = config[config.currentTab].useGPS; btn.innerText = isON ? "ON" : "OFF"; btn.className = "toggle-btn" + (isON ? " on" : ""); }
-
     function recordPosition(f) {
-        const d = config[config.currentTab];
-        const now = new Date();
+        const d = config[config.currentTab]; const now = new Date();
         d.pos = f; d.time = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-        
+        d.timestamp = now.getTime();
         if (d.useGPS && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(p => { d.lat = p.coords.latitude; d.lng = p.coords.longitude; save(); init(); }, () => { save(); init(); }, { timeout: 5000 });
         } else { save(); init(); }
     }
 
-    function renderSetupGrid() {
-        const g = document.getElementById('setupGrid'); g.innerHTML = '';
-        const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7'];
-        const cur = config[config.currentTab].floors;
-        ALL.forEach(f => {
-            const b = document.createElement('button'); b.className = 'btn-floor' + (cur.includes(f) ? ' selected' : '');
-            b.style.padding = '10px'; b.style.fontSize = '12px'; b.innerText = f;
-            b.onclick = () => { const i = cur.indexOf(f); if (i > -1) cur.splice(i, 1); else cur.push(f); renderSetupGrid(); };
-            g.appendChild(b);
-        });
+    function updateDuration() {
+        const d = config[config.currentTab];
+        const div = document.getElementById('durationTime');
+        if (d.timestamp) {
+            const diff = new Date().getTime() - d.timestamp;
+            const h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000);
+            div.innerText = h > 0 ? `⏱ ${h}시간 ${m}분째` : `⏱ ${m}분째`;
+        } else { div.innerText = ""; }
     }
 
-    function processImg(input, mode) {
-        if (!input.files || !input.files[0]) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const max = 500; let w = img.width, h = img.height;
-                if (w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
-                canvas.width = w; canvas.height = h;
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                const compressed = canvas.toDataURL('image/jpeg', 0.6);
-                if (mode === 'temp') { config[config.currentTab].temp = compressed; }
-                else { config[config.currentTab].profile = compressed; config[config.currentTab].temp = ''; showView('setting'); }
-                save(); init();
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-
+    function toggleGPS() { config[config.currentTab].useGPS = !config[config.currentTab].useGPS; updateGPSToggle(); }
+    function updateGPSToggle() { const btn = document.getElementById('gpsToggle'); const isON = config[config.currentTab].useGPS; btn.innerText = isON ? "ON" : "OFF"; btn.className = "toggle-btn" + (isON ? " on" : ""); }
+    function renderSetupGrid() { const g = document.getElementById('setupGrid'); g.innerHTML = ''; const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7']; const cur = config[config.currentTab].floors; ALL.forEach(f => { const b = document.createElement('button'); b.className = 'btn-floor' + (cur.includes(f) ? ' selected' : ''); b.style.padding = '10px'; b.style.fontSize = '12px'; b.innerText = f; b.onclick = () => { const i = cur.indexOf(f); if (i > -1) cur.splice(i, 1); else cur.push(f); renderSetupGrid(); }; g.appendChild(b); }); }
+    function processImg(input, mode) { if (!input.files || !input.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const max = 500; let w = img.width, h = img.height; if (w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } } canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); const compressed = canvas.toDataURL('image/jpeg', 0.6); if (mode === 'temp') { config[config.currentTab].temp = compressed; } else { config[config.currentTab].profile = compressed; config[config.currentTab].temp = ''; showView('setting'); } save(); init(); }; img.src = e.target.result; }; reader.readAsDataURL(input.files[0]); }
     function setPresetIcon(url) { config[config.currentTab].profile = url; config[config.currentTab].imgY = 50; showView('setting'); }
     function toggleIconLib() { document.getElementById('iconLib').classList.toggle('hidden'); }
-    function showView(v) {
-        document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
-        document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
-        if (v === 'setting') {
-            const d = config[config.currentTab];
-            const drag = document.getElementById('dragArea');
-            drag.innerHTML = d.profile ? `<img id="previewImg" src="${d.profile}" style="object-position: center ${d.imgY || 50}%">` : `<div style="font-size:50px">🚗</div>`;
-            updateGPSToggle(); renderSetupGrid();
-        }
-    }
-
+    function showView(v) { document.getElementById('mainView').classList.toggle('hidden', v !== 'main'); document.getElementById('settingView').classList.toggle('hidden', v !== 'setting'); if (v === 'setting') { const d = config[config.currentTab]; const drag = document.getElementById('dragArea'); drag.innerHTML = d.profile ? `<img id="previewImg" src="${d.profile}" style="object-position: center ${d.imgY || 50}%">` : `<div style="font-size:50px">🚗</div>`; updateGPSToggle(); renderSetupGrid(); } }
     function save() { localStorage.setItem(storeKey, JSON.stringify(config)); }
     function saveMemo(v) { config[config.currentTab].memo = v; save(); }
     function saveAllSettings() { save(); showView('main'); init(); }
     function switchTab(t) { config.currentTab = t; save(); init(); }
     function openMap() { const d = config[config.currentTab]; if (d.lat) window.open(`https://map.kakao.com/link/map/위치,${d.lat},${d.lng}`); else alert("좌표가 없습니다."); }
-    function clearParking() { if(confirm("기록을 삭제할까요?")) { const d = config[config.currentTab]; d.pos = '--'; d.time = ''; d.temp = ''; d.lat = null; d.lng = null; save(); init(); } }
-    function resetAppData() { if(confirm("🚗 [내 차 어디?] 저장공간을 비울까요?\n\n등록된 사진과 기록만 삭제되며,\n휴대폰의 다른 데이터는 절대 안전합니다!")) { localStorage.clear(); location.reload(); } }
-
+    function clearParking() { if(confirm("기록을 삭제할까요?")) { const d = config[config.currentTab]; d.pos = '--'; d.time = ''; d.temp = ''; d.lat = null; d.lng = null; d.timestamp = null; save(); init(); } }
+    function resetAppData() { if(confirm("🚗 앱의 저장공간을 비울까요?\n등록된 사진과 기록만 삭제되며 휴대폰은 안전합니다.")) { localStorage.clear(); location.reload(); } }
     let isDragging = false, startY, startYPos;
     document.getElementById('dragArea').addEventListener('touchstart', (e) => { isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY || 50; });
     window.addEventListener('touchmove', (e) => { if (!isDragging) return; let nextY = startYPos - (e.touches[0].pageY - startY) / 2; if (nextY < 0) nextY = 0; if (nextY > 100) nextY = 100; config[config.currentTab].imgY = nextY; const img = document.getElementById('previewImg'); if(img) img.style.objectPosition = `center ${nextY}%`; });
     window.addEventListener('touchend', () => { isDragging = false; save(); });
-
+    setInterval(updateDuration, 60000);
     init();
 </script>
 </body>
