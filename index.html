@@ -26,13 +26,11 @@
         .btn-camera { position: absolute; bottom: 10px; right: 10px; background: #30d158; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
         .hidden { display: none !important; }
         input[type="text"] { background: #2c2c2e; border: 1px solid #444; color: #fff; width: 100%; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: center; box-sizing: border-box; }
-        
-        /* 추가 기능 스타일 */
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; }
         .toggle-btn { background: #444; color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 12px; }
         .toggle-btn.on { background: #30d158; color: #fff; }
-        .icon-lib { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
-        .icon-item { width: 100%; aspect-ratio: 1; background: #2c2c2e; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #444; }
+        .icon-lib { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; padding: 10px; background: #2c2c2e; border-radius: 10px; }
+        .icon-item { aspect-ratio: 1; background: #3a3a3c; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #444; }
         .btn-reset { background: none; color: #ff453a; border: 1px solid #ff453a; width: 100%; padding: 12px; margin-top: 20px; border-radius: 10px; font-size: 12px; }
     </style>
 </head>
@@ -63,7 +61,7 @@
 
     <div id="settingView" class="scroll-area hidden">
         <div class="card">
-            <h3 style="margin-top:0;">🖼️ 프로필 설정</h3>
+            <h3 style="margin:0 0 15px 0;">🖼️ 프로필 설정</h3>
             <div class="img-box" id="dragArea" style="border: 2px solid #30d158; touch-action: none;"></div>
             
             <div style="display:flex; gap:8px; margin-top:10px;">
@@ -73,7 +71,6 @@
             <input type="file" id="profileIn" hidden accept="image/*" onchange="processImg(this, 'profile')">
 
             <div id="iconLib" class="hidden">
-                <p style="font-size:12px; color:#888; margin-top:15px;">추천 아이콘 (클릭 시 적용)</p>
                 <div class="icon-lib">
                     <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/744/744465.png')">🚗</div>
                     <div class="icon-item" onclick="setPresetIcon('https://cdn-icons-png.flaticon.com/512/3202/3202926.png')">🏎️</div>
@@ -89,15 +86,18 @@
                 <button id="gpsToggle" class="toggle-btn" onclick="toggleGPS()">OFF</button>
             </div>
 
-            <button id="saveSetBtn" onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:20px; padding:15px; font-size:16px;">설정 저장 및 적용</button>
+            <p style="font-size:12px; color:#888; margin-top:20px;">🏢 층수 버튼 구성 (현재 탭)</p>
+            <div id="setupGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;"></div>
+
+            <button id="saveSetBtn" onclick="saveAllSettings()" style="background:#30d158; color:#fff; width:100%; margin-top:25px; padding:15px; font-size:16px;">설정 저장 및 적용</button>
             <button class="btn-reset" onclick="resetAppData()">🗑️ 앱 저장공간 비우기</button>
-            <button onclick="showView('main')" style="background:none; color:#888; width:100%; margin-top:15px;">취소</button>
+            <button onclick="showView('main')" style="background:none; color:#888; width:100%; margin-top:15px; padding-bottom:30px;">취소</button>
         </div>
     </div>
 </div>
 
 <script>
-    const storeKey = 'parking_v9_8';
+    const storeKey = 'parking_v9_9';
     let config = JSON.parse(localStorage.getItem(storeKey)) || {
         currentTab: 'home',
         home: { profile: '', useGPS: false, floors: ['B1', 'B2', 'B3'], imgY: 50, pos: '--' },
@@ -121,44 +121,29 @@
         document.getElementById('actionBtns').classList.toggle('hidden', d.pos === '--' && !d.temp);
     }
 
-    function toggleGPS() {
-        const d = config[config.currentTab];
-        d.useGPS = !d.useGPS;
-        updateGPSToggle();
-    }
-
-    function updateGPSToggle() {
-        const btn = document.getElementById('gpsToggle');
-        const isON = config[config.currentTab].useGPS;
-        btn.innerText = isON ? "ON" : "OFF";
-        btn.className = "toggle-btn" + (isON ? " on" : "");
-    }
+    function toggleGPS() { config[config.currentTab].useGPS = !config[config.currentTab].useGPS; updateGPSToggle(); }
+    function updateGPSToggle() { const btn = document.getElementById('gpsToggle'); const isON = config[config.currentTab].useGPS; btn.innerText = isON ? "ON" : "OFF"; btn.className = "toggle-btn" + (isON ? " on" : ""); }
 
     function recordPosition(f) {
         const d = config[config.currentTab];
         const now = new Date();
-        d.pos = f;
-        d.time = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-        d.timestamp = now.getTime();
+        d.pos = f; d.time = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
         
         if (d.useGPS && navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(p => {
-                d.lat = p.coords.latitude; d.lng = p.coords.longitude;
-                save(); init();
-            }, () => { save(); init(); }, { timeout: 5000 });
-        } else {
-            save(); init();
-        }
+            navigator.geolocation.getCurrentPosition(p => { d.lat = p.coords.latitude; d.lng = p.coords.longitude; save(); init(); }, () => { save(); init(); }, { timeout: 5000 });
+        } else { save(); init(); }
     }
 
-    function setPresetIcon(url) {
-        config[config.currentTab].profile = url;
-        config[config.currentTab].imgY = 50;
-        showView('setting');
-    }
-
-    function toggleIconLib() {
-        document.getElementById('iconLib').classList.toggle('hidden');
+    function renderSetupGrid() {
+        const g = document.getElementById('setupGrid'); g.innerHTML = '';
+        const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7'];
+        const cur = config[config.currentTab].floors;
+        ALL.forEach(f => {
+            const b = document.createElement('button'); b.className = 'btn-floor' + (cur.includes(f) ? ' selected' : '');
+            b.style.padding = '10px'; b.style.fontSize = '12px'; b.innerText = f;
+            b.onclick = () => { const i = cur.indexOf(f); if (i > -1) cur.splice(i, 1); else cur.push(f); renderSetupGrid(); };
+            g.appendChild(b);
+        });
     }
 
     function processImg(input, mode) {
@@ -182,11 +167,8 @@
         reader.readAsDataURL(input.files[0]);
     }
 
-    function resetAppData() {
-        const msg = "🚗 [내 차 어디?] 저장공간을 비울까요?\n\n등록된 사진과 기록만 삭제되며,\n휴대폰의 다른 데이터는 절대 안전합니다!";
-        if(confirm(msg)) { localStorage.clear(); location.reload(); }
-    }
-
+    function setPresetIcon(url) { config[config.currentTab].profile = url; config[config.currentTab].imgY = 50; showView('setting'); }
+    function toggleIconLib() { document.getElementById('iconLib').classList.toggle('hidden'); }
     function showView(v) {
         document.getElementById('mainView').classList.toggle('hidden', v !== 'main');
         document.getElementById('settingView').classList.toggle('hidden', v !== 'setting');
@@ -194,8 +176,7 @@
             const d = config[config.currentTab];
             const drag = document.getElementById('dragArea');
             drag.innerHTML = d.profile ? `<img id="previewImg" src="${d.profile}" style="object-position: center ${d.imgY || 50}%">` : `<div style="font-size:50px">🚗</div>`;
-            updateGPSToggle();
-            renderSetupGrid();
+            updateGPSToggle(); renderSetupGrid();
         }
     }
 
@@ -205,9 +186,8 @@
     function switchTab(t) { config.currentTab = t; save(); init(); }
     function openMap() { const d = config[config.currentTab]; if (d.lat) window.open(`https://map.kakao.com/link/map/위치,${d.lat},${d.lng}`); else alert("좌표가 없습니다."); }
     function clearParking() { if(confirm("기록을 삭제할까요?")) { const d = config[config.currentTab]; d.pos = '--'; d.time = ''; d.temp = ''; d.lat = null; d.lng = null; save(); init(); } }
-    function renderSetupGrid() { const g = document.getElementById('setupGrid'); g.innerHTML = ''; const ALL = ['5F', '4F', '3F', '2F', '1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7']; const cur = config[config.currentTab].floors; ALL.forEach(f => { const b = document.createElement('button'); b.className = 'btn-floor' + (cur.includes(f) ? ' selected' : ''); b.style.fontSize = '12px'; b.innerText = f; b.onclick = () => { const i = cur.indexOf(f); if (i > -1) cur.splice(i, 1); else cur.push(f); renderSetupGrid(); }; g.appendChild(b); }); }
-    
-    // 드래그 로직
+    function resetAppData() { if(confirm("🚗 [내 차 어디?] 저장공간을 비울까요?\n\n등록된 사진과 기록만 삭제되며,\n휴대폰의 다른 데이터는 절대 안전합니다!")) { localStorage.clear(); location.reload(); } }
+
     let isDragging = false, startY, startYPos;
     document.getElementById('dragArea').addEventListener('touchstart', (e) => { isDragging = true; startY = e.touches[0].pageY; startYPos = config[config.currentTab].imgY || 50; });
     window.addEventListener('touchmove', (e) => { if (!isDragging) return; let nextY = startYPos - (e.touches[0].pageY - startY) / 2; if (nextY < 0) nextY = 0; if (nextY > 100) nextY = 100; config[config.currentTab].imgY = nextY; const img = document.getElementById('previewImg'); if(img) img.style.objectPosition = `center ${nextY}%`; });
